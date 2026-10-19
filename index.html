@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="汽车音响调音：信号发生器、RTA、相位、极性、延时、电平、分频" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="车载调音" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <title>汽车音响调音软件 · Car Audio Tuner</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">♪</div>
+        <div>
+          <h1>汽车音响调音</h1>
+          <p class="subtitle">信号 · 频谱 · 相位 · 极性 · 延时 · 电平 · 分频 · 全功能车用调音工具</p>
+        </div>
+      </div>
+      <div class="header-controls">
+        <div class="mic-status" id="micStatus">
+          <span class="dot" id="micDot"></span>
+          <span id="micLabel">麦克风未连接</span>
+        </div>
+        <button type="button" class="btn btn-ghost" id="btnMic">连接麦克风</button>
+      </div>
+    </header>
+
+    <div class="safety-banner" role="alert">
+      <strong>⚠ 安全提示：</strong>
+      测试音可能很大，请先把系统与功放音量调低，再缓慢升高。过高音量可能损坏扬声器与听力。默认输出电平较低。
+    </div>
+
+    <div class="unlock-bar" id="unlockBar">
+      <p>手机 / iOS 需先点击下方按钮解锁音频，并授权麦克风后才能测量。</p>
+      <div class="unlock-actions">
+        <button type="button" class="btn btn-primary btn-touch" id="btnUnlockAudio">🔊 点击解锁音频</button>
+        <button type="button" class="btn btn-accent btn-touch" id="btnMicUnlock">🎙 授权麦克风</button>
+      </div>
+      <p class="unlock-status" id="unlockStatus">音频未解锁</p>
+    </div>
+
+    <div class="master-bar">
+      <label class="control">
+        <span>主输出电平</span>
+        <input type="range" id="masterGain" min="0" max="100" value="12" />
+        <output id="masterGainVal">12%</output>
+      </label>
+      <label class="control">
+        <span>分析源</span>
+        <select id="analysisSource">
+          <option value="mic">麦克风</option>
+          <option value="gen">发生器环回（无麦预览）</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn-danger" id="btnStopAll">■ 全部停止</button>
+    </div>
+
+    <!-- 通道选择 -->
+    <div class="channel-bar card-inline">
+      <span class="bar-title">通道选择</span>
+      <div class="channels" id="channelButtons" role="group" aria-label="扬声器通道">
+        <button type="button" class="ch active" data-ch="FL">前左 FL</button>
+        <button type="button" class="ch active" data-ch="FR">前右 FR</button>
+        <button type="button" class="ch" data-ch="RL">后左 RL</button>
+        <button type="button" class="ch" data-ch="RR">后右 RR</button>
+        <button type="button" class="ch" data-ch="C">中置 C</button>
+        <button type="button" class="ch" data-ch="SUB">超低音 SUB</button>
+      </div>
+      <div class="ch-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="chAll">全开</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chFront">仅前</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chNone">全关</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chSoloHint" title="单击切换；电脑 Shift+单击 / 手机长按 = 独奏">长按独奏</button>
+      </div>
+    </div>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="gen" role="tab">信号发生器</button>
+      <button type="button" class="tab" data-tab="rta" role="tab">RTA 频谱</button>
+      <button type="button" class="tab" data-tab="phase" role="tab">相位测试</button>
+      <button type="button" class="tab" data-tab="polarity" role="tab">极性检测</button>
+      <button type="button" class="tab" data-tab="delay" role="tab">延时对齐</button>
+      <button type="button" class="tab" data-tab="spl" role="tab">电平匹配</button>
+      <button type="button" class="tab" data-tab="xover" role="tab">分频辅助</button>
+      <button type="button" class="tab" data-tab="log" role="tab">测量记录</button>
+      <button type="button" class="tab" data-tab="help" role="tab">使用说明</button>
+    </nav>
+
+    <main class="panels">
+      <!-- 1. 信号发生器 -->
+      <section id="panel-gen" class="panel active" role="tabpanel">
+        <div class="panel-grid">
+          <div class="card">
+            <h2>信号发生器</h2>
+            <p class="hint">生成正弦、扫频、噪声与脉冲，按当前通道选择路由到左/右（前/后在主机侧切换）。</p>
+            <div class="form-row">
+              <label>信号类型
+                <select id="genType">
+                  <option value="sine">定点正弦</option>
+                  <option value="sweep">对数扫频</option>
+                  <option value="pink">粉红噪声</option>
+                  <option value="white">白噪声</option>
+                  <option value="burst">猝发音 Burst</option>
+                  <option value="impulse">脉冲 Impulse</option>
+                </select>
+              </label>
+              <label>频率 (Hz)
+                <input type="number" id="genHz" min="20" max="20000" value="1000" step="1" />
+              </label>
+              <label>路由
+                <select id="genRoute">
+                  <option value="stereo">立体声 L+R</option>
+                  <option value="l">仅左 L</option>
+                  <option value="r">仅右 R</option>
+                  <option value="mono">单声道（双声道同相）</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label>扫频起点
+                <input type="number" id="genSweepStart" min="20" max="20000" value="20" />
+              </label>
+              <label>扫频终点
+                <input type="number" id="genSweepEnd" min="20" max="20000" value="20000" />
+              </label>
+              <label>时长 (秒)
+                <input type="number" id="genDur" min="0.1" max="60" value="8" step="0.1" />
+              </label>
+            </div>
+            <div class="preset-freqs" id="genPresets">
+              <span class="preset-label">快捷：</span>
+              <button type="button" class="chip" data-hz="40">40</button>
+              <button type="button" class="chip" data-hz="80">80</button>
+              <button type="button" class="chip" data-hz="125">125</button>
+              <button type="button" class="chip" data-hz="250">250</button>
+              <button type="button" class="chip" data-hz="500">500</button>
+              <button type="button" class="chip" data-hz="1000">1k</button>
+              <button type="button" class="chip" data-hz="2000">2k</button>
+              <button type="button" class="chip" data-hz="4000">4k</button>
+              <button type="button" class="chip" data-hz="8000">8k</button>
+              <button type="button" class="chip" data-hz="16000">16k</button>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="genPlay">▶ 播放</button>
+              <button type="button" class="btn btn-ghost" id="genStop" disabled>■ 停止</button>
+            </div>
+            <div class="readouts">
+              <div class="readout"><span class="label">状态</span><span class="value status" id="genStatus">就绪</span></div>
+              <div class="readout"><span class="label">当前频率</span><span class="value" id="genCurFreq">—</span><span class="unit">Hz</span></div>
+              <div class="readout"><span class="label">输出电平</span><span class="value" id="genLevelOut">12</span><span class="unit">%</span></div>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <h3>输出波形预览</h3>
+            <canvas id="genCanvas" width="640" height="260"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. RTA -->
+      <section id="panel-rta" class="panel" role="tabpanel" hidden>
+        <div class="panel-grid">
+          <div class="card">
+            <h2>RTA / 频谱分析</h2>
+            <p class="hint">实时频谱。可叠加目标曲线作 EQ 参考。峰值保持便于找谷峰。</p>
+            <div class="form-row">
+              <label>显示模式
+                <select id="rtaMode">
+                  <option value="fft">精细 FFT</option>
+                  <option value="oct1">1 倍频程</option>
+                  <option value="oct3" selected>1/3 倍频程</option>
+                </select>
+              </label>
+              <label>FFT 尺寸
+                <select id="rtaFft">
+                  <option value="2048">2048</option>
+                  <option value="4096" selected>4096</option>
+                  <option value="8192">8192</option>
+                </select>
+              </label>
+              <label>目标曲线
+                <select id="targetCurve">
+                  <option value="none">无</option>
+                  <option value="flat">平直 Flat</option>
+                  <option value="house">轻度 House（高音缓降）</option>
+                  <option value="car">车用偏暖 Warm</option>
+                  <option value="xcurve">影院 X-Curve 近似</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label class="check-label"><input type="checkbox" id="rtaPeakHold" checked /> 峰值保持</label>
+              <label class="check-label"><input type="checkbox" id="rtaAvg" checked /> 平均平滑</label>
+              <button type="button" class="btn btn-ghost btn-sm" id="rtaResetPeak">清除峰值</button>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="rtaStart">◎ 开始分析</button>
+              <button type="button" class="btn btn-ghost" id="rtaStop" disabled>■ 停止</button>
+              <button type="button" class="btn btn-accent" id="rtaPink">+ 粉红噪声激励</button>
+            </div>
+            <div class="readouts">
+              <div class="readout"><span class="label">峰值频率</span><span class="value" id="rtaPeakF">—</span><span class="unit">Hz</span></div>
+              <div class="readout"><span class="label">峰值电平</span><span class="value" id="rtaPeakDb">—</span><span class="unit">dB</span></div>
+              <div class="readout"><span class="label">整体电平</span><span class="value" id="rtaRms">—</span><span class="unit">dB</span></div>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <h3>频谱 / 目标曲线</h3>
+            <canvas id="rtaCanvas" width="640" height="340"></canvas>
+            <div class="axis-labels"><span>20</span><span>100</span><span>1k</span><span>10k</span><span>20k Hz</span></div>
+            <div class="legend">
+              <span class="leg in">实时</span>
+              <span class="leg mid">峰值保持</span>
+              <span class="leg out">目标曲线</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 相位 -->
+      <section id="panel-phase" class="panel" role="tabpanel" hidden>
+        <div class="panel-grid">
+          <div class="card">
+            <h2>相位测试</h2>
+            <p class="hint">对比左右相对相位。同相低音增强，反相低音抵消。建议用 40–100 Hz。</p>
+            <div class="form-row">
+              <label>测试频率
+                <select id="phaseFreq">
+                  <option value="40">40 Hz</option>
+                  <option value="80" selected>80 Hz</option>
+                  <option value="100">100 Hz</option>
+                  <option value="200">200 Hz</option>
+                  <option value="500">500 Hz</option>
+                  <option value="1000">1 kHz</option>
+                </select>
+              </label>
+              <label>播放方式
+                <select id="phaseMode">
+                  <option value="same">左右同相</option>
+                  <option value="inv">右声道反相</option>
+                  <option value="l">仅左</option>
+                  <option value="r">仅右</option>
+                </select>
+              </label>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="phasePlay">▶ 播放</button>
+              <button type="button" class="btn btn-ghost" id="phaseStop" disabled>■ 停止</button>
+              <button type="button" class="btn btn-accent" id="phaseMeasure">◎ 麦克风测相</button>
+            </div>
+            <div class="readouts">
+              <div class="readout"><span class="label">相位差</span><span class="value" id="phaseDeg">—</span><span class="unit">°</span></div>
+              <div class="readout"><span class="label">判定</span><span class="value status" id="phaseVerdict">等待</span></div>
+              <div class="readout"><span class="label">相关度</span><span class="value" id="phaseCorr">—</span></div>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <h3>相位指示</h3>
+            <canvas id="phaseCanvas" width="640" height="280"></canvas>
+            <div class="legend">
+              <span class="leg in">同相 ±45°</span>
+              <span class="leg mid">过渡</span>
+              <span class="leg out">反相 ±135°+</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 极性 -->
+      <section id="panel-polarity" class="panel" role="tabpanel" hidden>
+        <div class="panel-grid">
+          <div class="card">
+            <h2>极性检测</h2>
+            <p class="hint">向指定通道发正向脉冲，用麦克风看首波是正压还是负压，判断接线极性。</p>
+            <div class="form-row">
+              <label>测试通道
+                <select id="polCh">
+                  <option value="l">左输出 L（测前左等）</option>
+                  <option value="r">右输出 R（测前右等）</option>
+                  <option value="both">双声道同发</option>
+                </select>
+              </label>
+              <label>脉冲次数
+                <input type="number" id="polCount" min="1" max="10" value="3" />
+              </label>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="polFire">▶ 发射脉冲</button>
+              <button type="button" class="btn btn-accent" id="polMeasure">◎ 检测极性</button>
+              <button type="button" class="btn btn-ghost" id="polStop" disabled>■ 停止</button>
+            </div>
+            <div class="readouts">
+              <div class="readout"><span class="label">首波极性</span><span class="value status" id="polResult">未测</span></div>
+              <div class="readout"><span class="label">峰值</span><span class="value" id="polPeak">—</span></div>
+              <div class="readout"><span class="label">建议</span><span class="value status" id="polAdvice">—</span></div>
+            </div>
+            <div class="tip-box">正极性：振膜先外推。若判为反相，检查该扬声器正负极是否接反。</div>
+          </div>
+          <div class="card chart-card">
+            <h3>脉冲波形</h3>
+            <canvas id="polCanvas" width="640" height="280"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. 延时 -->
+      <section id="panel-delay" class="panel" role="tabpanel" hidden>
+        <div class="panel-grid">
+          <div class="card">
+            <h2>延时 / 时域对齐</h2>
+            <p class="hint">Chirp + 互相关测相对延时。可按车用通道标签记录多路结果。</p>
+            <div class="form-row">
+              <label>参考通道标签
+                <select id="delayRefLabel">
+                  <option value="FL">前左 FL</option>
+                  <option value="FR">前右 FR</option>
+                  <option value="RL">后左 RL</option>
+                  <option value="RR">后右 RR</option>
+                  <option value="C">中置 C</option>
+                  <option value="SUB">超低音 SUB</option>
+                </select>
+              </label>
+              <label>对比通道标签
+                <select id="delayCmpLabel">
+                  <option value="FR" selected>前右 FR</option>
+                  <option value="FL">前左 FL</option>
+                  <option value="RL">后左 RL</option>
+                  <option value="RR">后右 RR</option>
+                  <option value="C">中置 C</option>
+                  <option value="SUB">超低音 SUB</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label>信号
+                <select id="delaySig">
+                  <option value="chirp" selected>线性 Chirp</option>
+                  <option value="impulse">脉冲</option>
+                </select>
+              </label>
+              <label>声速 m/s
+                <input type="number" id="soundSpeed" min="330" max="360" value="343" />
+              </label>
+              <label>输出
+                <select id="delayOut">
+                  <option value="l">左输出 L</option>
+                  <option value="r">右输出 R</option>
+                </select>
+              </label>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="delayPlay">▶ 播放并测量</button>
+              <button type="button" class="btn btn-accent" id="delaySaveRow">保存到通道表</button>
+              <button type="button" class="btn btn-ghost" id="delayStop" disabled>■ 停止</button>
+            </div>
+            <div class="readouts three">
+              <div class="readout"><span class="label">相对延时</span><span class="value" id="delayMs">—</span><span class="unit">ms</span></div>
+              <div class="readout"><span class="label">距离差</span><span class="value" id="delayCm">—</span><span class="unit">cm</span></div>
+              <div class="readout"><span class="label">建议补偿</span><span class="value" id="delaySuggest">—</span></div>
+            </div>
+            <table class="data-table" id="delayTable">
+              <thead><tr><th>通道</th><th>延时 ms</th><th>距离 cm</th><th>建议补偿</th></tr></thead>
+              <tbody id="delayTableBody">
+                <tr><td colspan="4" class="muted">暂无记录 — 测量后点「保存到通道表」</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card chart-card">
+            <h3>互相关峰值</h3>
+            <canvas id="delayCanvas" width="640" height="280"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. 电平匹配 -->
+      <section id="panel-spl" class="panel" role="tabpanel" hidden>
+        <div class="panel-grid">
+          <div class="card">
+            <h2>声压 / 电平匹配</h2>
+            <p class="hint">相对电平表（未校准 SPL）。用于各通道增益匹配，读数仅供相对比较。</p>
+            <div class="form-row">
+              <label>激励信号
+                <select id="splSig">
+                  <option value="pink" selected>粉红噪声</option>
+                  <option value="sine">1 kHz 正弦</option>
+                  <option value="none">无（仅听环境/音乐）</option>
+                </select>
+              </label>
+              <label>通道标签
+                <select id="splLabel">
+                  <option value="FL">前左 FL</option>
+                  <option value="FR">前右 FR</option>
+                  <option value="RL">后左 RL</option>
+                  <option value="RR">后右 RR</option>
+                  <option value="C">中置 C</option>
+                  <option value="SUB">超低音 SUB</option>
+                </select>
+              </label>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="splStart">◎ 开始监测</button>
+              <button type="button" class="btn btn-accent" id="splCapture">记录当前通道</button>
+              <button type="button" class="btn btn-ghost" id="splStop" disabled>■ 停止</button>
+            </div>
+            <div class="readouts">
+              <div class="readout"><span class="label">瞬时</span><span class="value" id="splNow">—</span><span class="unit">dBFS</span></div>
+              <div class="readout"><span class="label">峰值</span><span class="value" id="splPeak">—</span><span class="unit">dBFS</span></div>
+              <div class="readout"><span class="label">平均</span><span class="value" id="splAvg">—</span><span class="unit">dBFS</span></div>
+            </div>
+            <div class="meter-wrap">
+              <div class="meter-bar"><div class="meter-fill" id="splMeter"></div></div>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>通道</th><th>平均 dBFS</th><th>相对基准</th></tr></thead>
+              <tbody id="splTableBody">
+                <tr><td colspan="3" class="muted">暂无 — 对各通道单独播放后「记录」</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card chart-card">
+            <h3>电平历史</h3>
+            <canvas id="splCanvas" width="640" height="280"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. 分频辅助 -->
+      <section id="panel-xover" class="panel" role="tabpanel" hidden>
+        <div class="panel-grid">
+          <div class="card">
+            <h2>分频辅助</h2>
+            <p class="hint">Butterworth 高通/低通预览，听感确认分频点与斜率（无源/有源分频调校）。</p>
+            <div class="form-row">
+              <label>滤波器
+                <select id="xoType">
+                  <option value="hpf">高通 HPF</option>
+                  <option value="lpf">低通 LPF</option>
+                  <option value="bpf">带通 BPF</option>
+                </select>
+              </label>
+              <label>分频点 Hz
+                <input type="number" id="xoFreq" min="20" max="20000" value="80" />
+              </label>
+              <label>斜率
+                <select id="xoSlope">
+                  <option value="12">12 dB/oct (Butterworth 2阶)</option>
+                  <option value="24" selected>24 dB/oct (Butterworth 4阶)</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label>激励
+                <select id="xoSig">
+                  <option value="pink" selected>粉红噪声</option>
+                  <option value="white">白噪声</option>
+                  <option value="sine">正弦（用下方频率）</option>
+                  <option value="sweep">扫频</option>
+                </select>
+              </label>
+              <label>正弦频率
+                <input type="number" id="xoSineHz" min="20" max="20000" value="1000" />
+              </label>
+              <label>BPF 上限 Hz
+                <input type="number" id="xoFreq2" min="20" max="20000" value="3000" />
+              </label>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="xoPlay">▶ 播放滤波信号</button>
+              <button type="button" class="btn btn-ghost" id="xoBypass">直通对比</button>
+              <button type="button" class="btn btn-ghost" id="xoStop" disabled>■ 停止</button>
+            </div>
+            <div class="readouts">
+              <div class="readout"><span class="label">类型</span><span class="value status" id="xoInfo">HPF 80Hz</span></div>
+              <div class="readout"><span class="label">-3dB 点</span><span class="value" id="xoCut">80</span><span class="unit">Hz</span></div>
+              <div class="readout"><span class="label">斜率</span><span class="value" id="xoSlopeOut">24</span><span class="unit">dB/oct</span></div>
+            </div>
+            <div class="tip-box">常见：超低音 LPF 80 Hz / 中低音 HPF 80 Hz；高音 HPF 2.5–3.5 kHz。先听分频点附近有无空洞或峰。</div>
+          </div>
+          <div class="card chart-card">
+            <h3>滤波器幅频示意</h3>
+            <canvas id="xoCanvas" width="640" height="280"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. 测量记录 -->
+      <section id="panel-log" class="panel" role="tabpanel" hidden>
+        <div class="card help-card">
+          <h2>测量记录</h2>
+          <p class="hint">保存当前会话快照（延时表、电平表、相位/RTA 摘要）为 JSON / CSV，可重新导入 JSON。</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="logSaveJson">导出 JSON</button>
+            <button type="button" class="btn btn-accent" id="logSaveCsv">导出 CSV</button>
+            <label class="btn btn-ghost" style="cursor:pointer">导入 JSON
+              <input type="file" id="logImport" accept="application/json,.json" hidden />
+            </label>
+            <button type="button" class="btn btn-ghost" id="logClear">清空会话记录</button>
+          </div>
+          <pre class="log-preview" id="logPreview">尚无快照。完成测量后点导出。</pre>
+        </div>
+      </section>
+
+      <!-- 9. 说明 -->
+      <section id="panel-help" class="panel" role="tabpanel" hidden>
+        <div class="card help-card">
+          <h2>使用说明</h2>
+          <ol class="help-list">
+            <li><strong>手机打开：</strong>用手机浏览器访问部署地址（须 <strong>HTTPS</strong>）。iOS Safari 不支持明文 HTTP 的麦克风。可「添加到主屏幕」以类 App 全屏使用（PWA）。</li>
+            <li><strong>解锁音频：</strong>进入页面后先点「点击解锁音频」，再点「授权麦克风」。iOS 必须在用户手势内启动 AudioContext。</li>
+            <li><strong>电脑打开：</strong>在本目录执行 <code>python3 -m http.server 8080</code>，访问 <code>http://localhost:8080</code>。</li>
+            <li><strong>通道：</strong>上方选择车用通道标签；单击切换，<strong>长按</strong>（手机）或 Shift+单击（电脑）为独奏。实际 L/R 由「路由」决定。</li>
+            <li><strong>信号发生器：</strong>正弦/扫频/粉红/白噪/猝发/脉冲，调音基础激励。</li>
+            <li><strong>RTA：</strong>接麦看实时频谱，可叠加 Flat / House / 车用偏暖目标曲线辅助 EQ。</li>
+            <li><strong>相位：</strong>低音同相/反相对比；有麦可估算相位差。</li>
+            <li><strong>极性：</strong>脉冲首波正负判断接线是否反相。</li>
+            <li><strong>延时：</strong>Chirp 互相关得 ms 与 cm，写入通道表后在 DSP 填补偿。</li>
+            <li><strong>电平：</strong>相对 dBFS 匹配各通道增益（非校准声压计）。</li>
+            <li><strong>分频：</strong>Butterworth 12/24 dB 听感确认分频点。</li>
+            <li><strong>安全：</strong>主电平默认 12%，先低后高。</li>
+          </ol>
+          <h3>局限</h3>
+          <ul class="help-list">
+            <li>麦克风未校准，相位/电平/延时为相对值，非实验室精度。</li>
+            <li>车内反射与噪声影响测量；建议静音、多次取平均。</li>
+            <li>蓝牙额外延时大，精确对齐请用有线 AUX。</li>
+            <li>浏览器无法真正 6 声道独立输出，多通道靠主机切换 + 本工具 L/R 路由。</li>
+            <li><strong>iOS：</strong>须 HTTPS；静音键可能影响播放；后台会挂起音频；耳机/蓝牙路由由系统控制。</li>
+            <li>手机扬声器频响差，测量请用外接功放/车机，手机麦仅作相对参考。</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>汽车音响调音 · 本地 / PWA 离线可用</span>
+      <span id="sampleRateInfo"></span>
+    </footer>
+  </div>
+
+  <nav class="bottom-nav" id="bottomNav" aria-label="主导航">
+    <button type="button" class="bnav active" data-tab="gen"><span class="bnav-ico">〰</span><span>发生器</span></button>
+    <button type="button" class="bnav" data-tab="rta"><span class="bnav-ico">▣</span><span>频谱</span></button>
+    <button type="button" class="bnav" data-tab="phase"><span class="bnav-ico">φ</span><span>相位</span></button>
+    <button type="button" class="bnav" data-tab="delay"><span class="bnav-ico">⏱</span><span>延时</span></button>
+    <button type="button" class="bnav" data-tab="more" id="bnavMore"><span class="bnav-ico">···</span><span>更多</span></button>
+  </nav>
+  <div class="more-sheet" id="moreSheet" hidden>
+    <button type="button" class="more-item" data-tab="polarity">极性检测</button>
+    <button type="button" class="more-item" data-tab="spl">电平匹配</button>
+    <button type="button" class="more-item" data-tab="xover">分频辅助</button>
+    <button type="button" class="more-item" data-tab="log">测量记录</button>
+    <button type="button" class="more-item" data-tab="help">使用说明</button>
+    <button type="button" class="more-item more-close" id="moreClose">关闭</button>
+  </div>
+
+  <script src="js/audio-engine.js"></script>
+  <script src="js/channels.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/rta.js"></script>
+  <script src="js/phase-test.js"></script>
+  <script src="js/polarity.js"></script>
+  <script src="js/delay-test.js"></script>
+  <script src="js/spl.js"></script>
+  <script src="js/xover.js"></script>
+  <script src="js/logger.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

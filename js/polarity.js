@@ -50,6 +50,7 @@ const Polarity = (() => {
 
     if (capturePromise) {
       const cap = await capturePromise;
+      AudioEngine.releaseMic();
       analyze(cap);
     } else {
       el('polResult').textContent = doMeasure ? '无麦' : '已发射';

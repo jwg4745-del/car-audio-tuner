@@ -71,6 +71,7 @@ const PhaseTest = (() => {
     // Also capture a second window for correlation stability
     const cap2 = await AudioEngine.captureTimeData(AudioEngine.getMicAnalyser(), 0.4);
     const est2 = AudioEngine.estimatePhase(cap2.data, freq, cap2.sampleRate);
+    AudioEngine.releaseMic();
 
     // Relative phase stability: compare two windows
     let dPhase = est.phase - est2.phase;

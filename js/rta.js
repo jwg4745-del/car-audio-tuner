@@ -64,6 +64,7 @@ const RTA = (() => {
   }
 
   function stop() {
+    AudioEngine.releaseMic();
     running = false;
     if (anim) cancelAnimationFrame(anim);
     el('rtaStart').disabled = false;
@@ -118,6 +119,7 @@ const RTA = (() => {
     }
 
     const plot = useAvg ? avgBuf : data;
+    const dbMin = -100, dbMax = 0;
     c.fillStyle = '#0a0e14';
     c.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -134,7 +136,6 @@ const RTA = (() => {
     });
 
     let peakF = 20, peakDb = -140;
-    const dbMin = -100, dbMax = 0;
 
     function dbToY(db, h) {
       return (1 - (db - dbMin) / (dbMax - dbMin)) * h;

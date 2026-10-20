@@ -161,13 +161,15 @@ const AudioEngine = (() => {
     if (micStream) return { ok: true, analyser: micAnalyser };
     try {
       setSession('play-and-record');
-      micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
+      const audio = (typeof MicPick !== 'undefined') ? MicPick.constraints() : { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio });
+      } catch (e1) {
+        if (audio.deviceId) {
+          try { if (typeof MicPick !== 'undefined') MicPick.clear(); } catch (_) {}
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+        } else throw e1;
+      }
       micSource = ctx.createMediaStreamSource(micStream);
       micAnalyser = ctx.createAnalyser();
       micAnalyser.fftSize = 4096;

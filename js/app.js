@@ -184,11 +184,17 @@ const App = (() => {
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'https:' && location.protocol !== 'http:') return;
     window.addEventListener('load', () => {
-      const hadCtrl = !!navigator.serviceWorker.controller; let reloaded = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtrl && !reloaded) { reloaded = true; location.reload(); } });
-      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((r) => { try { r.update(); } catch (_) {} }).catch((e) => {
-        console.warn('SW register failed', e);
+      const hadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // 每个 SW 版本只自动刷新一次，避免 update 循环把页面打不开
+        try { if (sessionStorage.getItem('cat-sw-reloaded') === 'v19') return; sessionStorage.setItem('cat-sw-reloaded', 'v19'); } catch (_) {}
+        if (hadCtrl) location.reload();
       });
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((r) => {
+        // 刚刷新过就不要立刻再 update，减少抖动
+        try { if (sessionStorage.getItem('cat-sw-reloaded') === 'v19') return; } catch (_) {}
+        try { r.update(); } catch (_) {}
+      }).catch((e) => { console.warn('SW register failed', e); });
     });
   }
 
@@ -299,7 +305,7 @@ const App = (() => {
     if (typeof TestTrack !== 'undefined') TestTrack.init();
     if (typeof Simple !== 'undefined') Simple.init();
     if (typeof CarId !== 'undefined') CarId.init();
-    const pro = [typeof MultiPoint !== 'undefined' && MultiPoint, typeof ImageCheck !== 'undefined' && ImageCheck, typeof CalUI !== 'undefined' && CalUI, typeof XoverCheck !== 'undefined' && XoverCheck, typeof Plans !== 'undefined' && Plans, typeof DspExport !== 'undefined' && DspExport, typeof Listen !== 'undefined' && Listen, typeof DuoPages !== 'undefined' && DuoPages];
+    const pro = [typeof MultiPoint !== 'undefined' && MultiPoint, typeof ImageCheck !== 'undefined' && ImageCheck, typeof CalUI !== 'undefined' && CalUI, typeof XoverCheck !== 'undefined' && XoverCheck, typeof Plans !== 'undefined' && Plans, typeof DspExport !== 'undefined' && DspExport, typeof Listen !== 'undefined' && Listen, typeof DuoPages !== 'undefined' && DuoPages, typeof MicPick !== 'undefined' && MicPick];
     pro.forEach((m) => { if (m) { try { m.init(); } catch (e) { console.error(e); } } });
     TunePlan.init();
     el('planCsv').onclick = () => Channels.exportPlan('csv');

@@ -106,6 +106,13 @@
     <nav class="tabs" role="tablist">
       <button type="button" class="tab active" data-tab="simple" role="tab">正反相</button>
       <button type="button" class="tab" data-tab="carid" role="tab">整车识别</button>
+      <button type="button" class="tab" data-tab="multi" role="tab">多点测量</button>
+      <button type="button" class="tab" data-tab="image" role="tab">声像居中</button>
+      <button type="button" class="tab" data-tab="cal" role="tab">麦克风校准</button>
+      <button type="button" class="tab" data-tab="xcheck" role="tab">分频衔接</button>
+      <button type="button" class="tab" data-tab="listen" role="tab">听感评分</button>
+      <button type="button" class="tab" data-tab="plans" role="tab">方案管理</button>
+      <button type="button" class="tab" data-tab="dsp" role="tab">DSP参数表</button>
       <button type="button" class="tab" data-tab="gen" role="tab">信号发生器</button>
       <button type="button" class="tab" data-tab="rta" role="tab">RTA 频谱</button>
       <button type="button" class="tab" data-tab="phase" role="tab">相位测试</button>
@@ -192,6 +199,149 @@
           </div>
           <details class="sp-det"><summary>详细数据</summary><pre id="ciDetail"></pre></details>
         </div>
+      </section>
+
+
+      <!-- 多点平均测量 -->
+      <section id="panel-multi" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">🎯 多点平均测量</h2>
+        <p class="sp-hint">在驾驶位头部周围录 5–9 个点，取平均再调 EQ，避免把某一点的峰谷当真</p>
+        <div class="sp-seg sp-role"><button type="button" data-mprole="player">🔊 我是播放端</button><button type="button" data-mprole="recorder">🎙 我是录音端</button></div>
+        <div id="mpPlayer" class="sp-main">
+          <button type="button" class="sp-big" id="mpPlay">▶ 开始放</button>
+          <div class="sp-cue" id="mpCue">先在录音端点「● 开始录」</div>
+          <div class="sp-count" id="mpCount"></div>
+          <p class="sp-hint">每个点都点一次「开始放」，约 13 秒 · 播放端不会打开麦克风</p>
+        </div>
+        <div id="mpRecorder" class="sp-main" hidden>
+          <div class="mp-pos" id="mpPos"></div><div class="mp-dots" id="mpDots"></div><label class="sp-opt">点数 <select id="mpN"><option value="5">5 个点</option><option value="7">7 个点</option><option value="9">9 个点</option></select></label><label class="sp-opt">目标曲线 <select id="mpTarget"><option value="car">车用偏暖（低音 +6 dB）</option><option value="house">轻度 House</option><option value="flat">平直</option></select></label>
+          <button type="button" class="sp-big rec" id="mpRec">● 开始录</button>
+          <p class="sp-cue small">每个点：先点录，再在播放端点放；录完把手机移到下一个位置</p>
+          <div class="sp-count" id="mpRecStatus"></div>
+        </div>
+        <div class="sp-actions"><button type="button" class="btn btn-accent btn-touch" id="mpCalc" hidden>算平均结果</button><button type="button" class="btn btn-touch" id="mpUndo" hidden>重录上一个点</button><button type="button" class="btn btn-touch" id="mpClear" hidden>清空</button></div>
+        <div class="sp-result" id="mpResult" hidden>
+          <div class="sp-verdict small" id="mpVerdict"></div>
+          <div id="mpSummary"></div>
+          <div class="sp-actions"><button type="button" class="btn btn-accent btn-touch" id="mpWrite">写入调音方案（EQ）</button></div>
+          <details class="sp-det"><summary>详细数据</summary><pre id="mpDetail"></pre></details>
+        </div>
+      </section>
+
+      <!-- 麦克风校准 -->
+      <section id="panel-cal" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">🎤 麦克风校准</h2>
+        <p class="sp-hint">在<b>录音那台手机</b>上设置。手机麦克风低音和高音会偏弱，校准后频谱、整车识别、多点测量、录音分析都会自动修正</p>
+        <div class="cal-grid">
+          <button type="button" data-calmode="none">不校准</button>
+          <button type="button" data-calmode="iphone">iPhone 通用<small>估计曲线</small></button>
+          <button type="button" data-calmode="android">安卓通用<small>估计曲线</small></button>
+          <button type="button" data-calmode="file">导入校准文件<small>.txt / .cal（UMIK、miniDSP、REW）</small></button>
+        </div>
+        <input type="file" id="calFile" accept=".txt,.cal,.frd,.csv,text/plain" hidden />
+        <p class="sp-now" id="calNow"></p>
+        <p class="sp-hint" id="calMsg"></p>
+        <canvas id="calCanvas" class="pro-canvas" width="640" height="240"></canvas>
+        <p class="ci-warn">⚠️ 「通用」曲线是按常见手机估计的，不是你这台手机实测；要准确请用测量麦克风（如 UMIK-1）的校准文件</p>
+      </section>
+
+      <!-- 声像居中检查 -->
+      <section id="panel-image" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">🎙 声像居中检查</h2>
+        <p class="sp-hint">测主驾位置左右声音谁先到、谁更响，算出声像偏多少、哪边该加多少延时</p>
+        <div class="sp-seg sp-role"><button type="button" data-imrole="player">🔊 我是播放端</button><button type="button" data-imrole="recorder">🎙 我是录音端</button></div>
+        <div id="imPlayer" class="sp-main">
+          <button type="button" class="sp-big" id="imPlay">▶ 开始放</button>
+          <div class="sp-cue" id="imCue">先在录音端点「● 开始录」</div>
+          <div class="sp-count" id="imCount"></div>
+          <p class="sp-hint">DSP 正常（所有喇叭都开），约 25 秒 · 播放端不会打开麦克风</p>
+        </div>
+        <div id="imRecorder" class="sp-main" hidden>
+          
+          <button type="button" class="sp-big rec" id="imRec">● 开始录</button>
+          <p class="sp-cue small">录音手机放主驾两耳中间，麦克风朝前</p>
+          <div class="sp-count" id="imRecStatus"></div>
+        </div>
+        <div class="sp-result" id="imResult" hidden>
+          <div class="sp-verdict" id="imVerdict"></div>
+          <div id="imSummary"></div>
+          <div class="sp-actions"><button type="button" class="btn btn-touch" id="imAgain">再测一次</button><button type="button" class="btn btn-accent btn-touch" id="imApply">记到通道表</button></div>
+          <p class="sp-hint" id="imApplied"></p>
+        </div>
+        <div class="card im-ear">
+          <b>听感确认</b><p class="sp-hint">播放端放到「中间人声区」时，坐在主驾闭眼听，声音在哪？</p>
+          <div class="sp-actions"><button type="button" class="btn btn-touch" data-imear="L">偏左</button><button type="button" class="btn btn-accent btn-touch" data-imear="C">正中 ✓</button><button type="button" class="btn btn-touch" data-imear="R">偏右</button></div>
+        </div>
+      </section>
+
+
+      <!-- 分频点衔接检查 -->
+      <section id="panel-xcheck" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">🔗 分频点衔接检查</h2>
+        <p class="sp-hint">检查两组喇叭在分频点能不能接平：单开、单开、一起开、一起开+翻转，各录一次</p>
+        <div class="sp-seg"><button type="button" data-xoj="xo300">300 Hz<small>前门中低 ↔ 仪表台中音</small></button><button type="button" data-xoj="xo4k">4 kHz<small>仪表台中音 ↔ 高音</small></button></div>
+        <div class="sp-seg sp-role"><button type="button" data-xcrole="player">🔊 我是播放端</button><button type="button" data-xcrole="recorder">🎙 我是录音端</button></div>
+        <ol class="xc-steps" id="xcSteps"></ol>
+        <div class="sp-cue small" id="xcNow"></div>
+        <div id="xcPlayer" class="sp-main">
+          <button type="button" class="sp-big" id="xcPlay">▶ 开始放</button>
+          <div class="sp-cue" id="xcCue">先在录音端点「● 开始录」</div>
+          <div class="sp-count" id="xcCount"></div>
+          <p class="sp-hint">每一步按 DSP 设置好后点一次（约 11 秒）· 两台都选同一个分频点 · 播放端不会打开麦克风</p>
+        </div>
+        <div id="xcRecorder" class="sp-main" hidden>
+          <button type="button" class="sp-big rec" id="xcRec">● 开始录</button>
+          <p class="sp-cue small">录音手机放主驾头部，每步都不要移动</p>
+          <div class="sp-count" id="xcRecStatus"></div>
+        </div>
+        <div class="sp-actions"><button type="button" class="btn btn-accent btn-touch" id="xcCalc" hidden>看结果</button><button type="button" class="btn btn-touch" id="xcReset">重新开始</button></div>
+        <div class="sp-result" id="xcResult" hidden>
+          <div class="sp-verdict small" id="xcVerdict"></div>
+          <div id="xcSummary"></div>
+          <div class="sp-actions"><button type="button" class="btn btn-accent btn-touch" id="xcApply" hidden>记到通道表</button></div>
+          <p class="sp-hint" id="xcApplied"></p>
+        </div>
+      </section>
+
+      <!-- 方案管理：保存 / 对比 / 撤销 -->
+      <section id="panel-plans" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">🗂 方案管理</h2>
+        <button type="button" class="btn btn-touch btn-accent" id="plUndo">↶ 撤销</button>
+        <div class="card"><b>保存当前方案</b>
+          <div class="sp-actions"><button type="button" class="btn btn-touch" data-plname="主驾">存为「主驾」</button><button type="button" class="btn btn-touch" data-plname="全车">存为「全车」</button></div>
+          <div class="pl-new"><input id="plName" placeholder="其它名字，如：调前、调后" maxlength="20"><button type="button" class="btn btn-touch" id="plSave">保存</button></div>
+          <p class="sp-hint" id="plMsg"></p>
+        </div>
+        <div class="card"><b>已保存（勾选来对比曲线）</b>
+          <label class="pl-row"><span><input type="checkbox" id="plNowSel" checked> <b>当前</b></span></label>
+          <div id="plList"></div>
+          <canvas id="plCanvas" class="pro-canvas" width="640" height="260"></canvas>
+          <p class="sp-hint" id="plNoCurve">还没有频响曲线：先做「整车识别」或「多点测量」并写入方案</p>
+          <div id="plDiff"></div>
+        </div>
+      </section>
+
+      <!-- DSP 参数表 -->
+      <section id="panel-dsp" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">📋 DSP 参数表</h2>
+        <label class="sp-opt">数据来源 <select id="dxSrc"><option value="ch">当前通道表</option><option value="plan">调音方案建议值</option></select></label>
+        <div class="sp-actions"><button type="button" class="btn btn-accent btn-touch" id="dxCsv">导出 CSV（Excel 可打开）</button><button type="button" class="btn btn-touch" id="dxPrint">打印 / 存 PDF</button></div>
+        <div class="dsp-wrap" id="dxTable"></div>
+        <p class="sp-hint">通用格式：逐路照着输入 DSP 即可</p>
+      </section>
+
+      <!-- 听感测试 -->
+      <section id="panel-listen" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">🎧 听感测试与评分</h2>
+        <p class="sp-hint">用连车载蓝牙的那台播放（不用麦克风），坐主驾听完打分，软件给出小幅微调</p>
+        <div class="pro-grid" id="lsClips"></div>
+        <label class="sp-opt"><input type="checkbox" id="lsLoop"> 循环播放</label>
+        <div class="card" id="lsSliders"></div>
+        <div class="card"><b>建议微调</b><div id="lsOut"></div>
+          <div class="sp-actions"><button type="button" class="btn btn-accent btn-touch" id="lsApply" hidden>记到通道表</button></div>
+          <p class="sp-hint" id="lsMsg"></p>
+        </div>
+        <p class="ci-warn">⚠️ 每次只做小改动（≤2 dB / 0.1 ms），改完再听；数据测量优先，听感最后定</p>
       </section>
 
       <!-- 1. 信号发生器 -->
@@ -738,7 +888,7 @@
             <div class="card chart-card"><h3>波形总览（红线 = 满幅）</h3><canvas id="anWave" width="640" height="160"></canvas></div>
           </div>
           <div class="card chart-card an-block">
-            <h3>平均频谱（Welch）+ 1/3 倍频程 · 黄虚线 = 目标 · 红柱 = 偏差 > ±4 dB</h3>
+            <h3>平均频谱（Welch）+ 1/3 倍频程 · 黄虚线 = 目标 · 红柱 = 偏差 &gt; ±4 dB</h3>
             <canvas id="anSpec" width="640" height="320"></canvas>
           </div>
           <div class="panel-grid an-grid">
@@ -830,6 +980,13 @@
   </nav>
   <div class="more-sheet" id="moreSheet" hidden>
     <button type="button" class="more-item" data-tab="carid">🚗 整车识别</button>
+    <button type="button" class="more-item" data-tab="multi">🎯 多点测量</button>
+    <button type="button" class="more-item" data-tab="image">🎙 声像居中</button>
+    <button type="button" class="more-item" data-tab="cal">🎤 麦克风校准</button>
+    <button type="button" class="more-item" data-tab="xcheck">🔗 分频衔接</button>
+    <button type="button" class="more-item" data-tab="listen">🎧 听感评分</button>
+    <button type="button" class="more-item" data-tab="plans">🗂 方案管理/撤销</button>
+    <button type="button" class="more-item" data-tab="dsp">📋 DSP 参数表</button>
     <button type="button" class="more-item" data-tab="delay">延时对齐</button>
     <button type="button" class="more-item" data-tab="polarity">极性检测</button>
     <button type="button" class="more-item" data-tab="spl">电平匹配</button>
@@ -855,6 +1012,9 @@
   <script src="js/testtrack.js"></script>
   <script src="js/simple.js"></script>
   <script src="js/carid.js"></script>
+  <script src="js/duo.js"></script>
+  <script src="js/pro1.js"></script>
+  <script src="js/pro2.js"></script>
   <script src="js/analyzer.js"></script>
   <script src="js/tuneplan.js"></script>
   <script src="js/app.js"></script>

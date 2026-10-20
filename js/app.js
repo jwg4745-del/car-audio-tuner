@@ -105,11 +105,15 @@ const App = (() => {
       }
     });
 
-    // Scroll top tab into view
+    // 选中标签横向居中 + 页面标题滚到屏幕顶部（避开吸顶标签栏）
     const topTab = document.querySelector('.tab[data-tab="' + name + '"]');
-    if (topTab && topTab.scrollIntoView) {
-      topTab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-    }
+    const bar = document.querySelector('.tabs');
+    if (topTab && bar) bar.scrollTo({ left: topTab.offsetLeft - (bar.clientWidth - topTab.offsetWidth) / 2, behavior: 'smooth' });
+    const panel = el('panel-' + name);
+    if (panel) requestAnimationFrame(() => {
+      const off = bar ? bar.getBoundingClientRect().height : 0;
+      window.scrollTo({ top: Math.max(0, panel.getBoundingClientRect().top + window.pageYOffset - off - 8), behavior: 'smooth' });
+    });
 
     if (name === 'log') Logger.preview();
     if (name === 'xover') {

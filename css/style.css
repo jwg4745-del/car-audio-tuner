@@ -632,3 +632,8 @@ select, input[type="number"], input[type="text"], textarea {
 /* 修复：.sp 的 display:flex 覆盖了 .panel 的隐藏 → 所有 .sp 页面叠在一起 */
 .panel:not(.active),[hidden]{display:none !important}
 .panel.sp.active{display:flex}
+.tabs{position:sticky;top:0;z-index:50;background:var(--bg,#0d1117)}
+.panel{scroll-margin-top:60px}
+.more-sheet{max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid !important;grid-template-columns:1fr 1fr}
+.more-sheet[hidden]{display:none !important}
+.more-sheet .more-close{grid-column:1/-1}

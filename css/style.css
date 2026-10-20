@@ -600,3 +600,11 @@ select, input[type="number"], input[type="text"], textarea {
 .sp-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 .sp-det{margin-top:14px;text-align:left;font-size:12px;opacity:.75}
 .sp-det pre{white-space:pre-wrap;word-break:break-all;max-height:240px;overflow:auto}
+
+.ci-title{text-align:center;margin:4px 0 0}
+.ci-tab{width:100%;border-collapse:collapse;text-align:left;font-size:16px;margin:8px 0}
+.ci-tab th{white-space:nowrap;padding:8px 10px 8px 0;vertical-align:top;opacity:.75;font-weight:600}
+.ci-tab td{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.ci-iss{text-align:left;font-size:15px;margin:10px 0}.ci-iss ol{margin:6px 0 0 20px;padding:0}
+.ci-warn{text-align:left;font-size:14px;color:#f0b429}
+#panel-carid .sp-opt{display:flex;align-items:center;gap:8px;font-size:15px}

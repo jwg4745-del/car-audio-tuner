@@ -105,6 +105,7 @@
 
     <nav class="tabs" role="tablist">
       <button type="button" class="tab active" data-tab="simple" role="tab">正反相</button>
+      <button type="button" class="tab" data-tab="carid" role="tab">整车识别</button>
       <button type="button" class="tab" data-tab="gen" role="tab">信号发生器</button>
       <button type="button" class="tab" data-tab="rta" role="tab">RTA 频谱</button>
       <button type="button" class="tab" data-tab="phase" role="tab">相位测试</button>
@@ -159,6 +160,37 @@
             <button type="button" class="btn btn-touch" id="spWrite">写入调音方案</button>
           </div>
           <details class="sp-det"><summary>详细数据</summary><pre id="spDetail"></pre></details>
+        </div>
+      </section>
+
+      <!-- 整车识别（两台设备） -->
+      <section id="panel-carid" class="panel sp" role="tabpanel" hidden>
+        <h2 class="ci-title">🚗 整车识别</h2>
+        <p class="sp-hint">一次 45 秒录音，测出左右音量、延时、相位、低音下潜、高频、频响峰谷，并打分</p>
+        <div class="sp-seg sp-role">
+          <button type="button" data-cirole="player">🔊 我是播放端</button>
+          <button type="button" data-cirole="recorder">🎙 我是录音端</button>
+        </div>
+        <div id="ciPlayer" class="sp-main">
+          <button type="button" class="sp-big" id="ciPlay">▶ 开始放</button>
+          <div class="sp-cue" id="ciCue">先在录音端点「● 开始录」</div>
+          <div class="sp-count" id="ciCount"></div>
+          <p class="sp-hint">DSP 恢复正常（所有喇叭都开），音量调到平时偏大 · 播放端不会打开麦克风</p>
+        </div>
+        <div id="ciRecorder" class="sp-main" hidden>
+          <button type="button" class="sp-big rec" id="ciRec">● 开始录</button>
+          <p class="sp-cue small">录音手机放主驾头部位置，先点录，再在播放端点放</p>
+          <div class="sp-count" id="ciRecStatus"></div>
+          <label class="sp-opt">目标曲线 <select id="ciTarget"><option value="car">车用偏暖（低音 +6 dB）</option><option value="house">轻度 House</option><option value="flat">平直</option></select></label>
+        </div>
+        <div class="sp-result" id="ciResult" hidden>
+          <div class="sp-verdict" id="ciScore"></div>
+          <div id="ciSummary"></div>
+          <div class="sp-actions">
+            <button type="button" class="btn btn-touch" id="ciAgain">再测一次</button>
+            <button type="button" class="btn btn-accent btn-touch" id="ciWrite">生成整车调音方案</button>
+          </div>
+          <details class="sp-det"><summary>详细数据</summary><pre id="ciDetail"></pre></details>
         </div>
       </section>
 
@@ -797,6 +829,7 @@
     <button type="button" class="bnav" data-tab="more" id="bnavMore"><span class="bnav-ico">···</span><span>更多</span></button>
   </nav>
   <div class="more-sheet" id="moreSheet" hidden>
+    <button type="button" class="more-item" data-tab="carid">🚗 整车识别</button>
     <button type="button" class="more-item" data-tab="delay">延时对齐</button>
     <button type="button" class="more-item" data-tab="polarity">极性检测</button>
     <button type="button" class="more-item" data-tab="spl">电平匹配</button>
@@ -821,6 +854,7 @@
   <script src="js/logger.js"></script>
   <script src="js/testtrack.js"></script>
   <script src="js/simple.js"></script>
+  <script src="js/carid.js"></script>
   <script src="js/analyzer.js"></script>
   <script src="js/tuneplan.js"></script>
   <script src="js/app.js"></script>

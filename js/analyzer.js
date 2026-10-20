@@ -46,7 +46,7 @@ const Analyzer = (() => {
     AudioEngine.releaseMic({ noReset: true });
     AudioEngine.setExternalMic(true);
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: (typeof MicPick !== 'undefined') ? MicPick.constraints() : { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     } catch (e) { AudioEngine.setExternalMic(false); alert('无法使用麦克风：' + e.message + '\n需要 HTTPS 并允许麦克风权限。'); return; }
     const secs = Math.max(2, Math.min(120, +el('anRecSec').value || 10));
     const chunks = [];

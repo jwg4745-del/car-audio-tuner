@@ -189,7 +189,7 @@ const CarId = (() => {
     $('ciResult').hidden = true;
     AudioEngine.releaseMic({ noReset: true }); AudioEngine.setExternalMic(true);
     let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: (typeof MicPick !== 'undefined') ? MicPick.constraints() : { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
     catch (e) { AudioEngine.setExternalMic(false); show({ ok: false, reason: '没拿到麦克风权限：请在浏览器设置里允许麦克风' }); return; }
     const ctx = new (window.AudioContext || window.webkitAudioContext)(); await ctx.resume();
     const srcN = ctx.createMediaStreamSource(stream), sp = ctx.createScriptProcessor(4096, 1, 1);

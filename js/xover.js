@@ -13,6 +13,24 @@ const Xover = (() => {
       el(id).addEventListener('change', () => { updateInfo(); drawResponse(); });
       el(id).addEventListener('input', () => { updateInfo(); drawResponse(); });
     });
+    const loadFields = () => { const c = Channels.get(el('xoChan').value); if (!c) return; el('xoChHpf').value = c.hpf ?? ''; el('xoChLpf').value = c.lpf ?? ''; };
+    el('xoChan').addEventListener('change', loadFields);
+    Channels.onChange(loadFields);
+    setTimeout(loadFields, 0);
+    el('xoSaveCh').onclick = () => {
+      const v = (id) => (el(id).value === '' ? null : Math.max(10, Math.min(20000, +el(id).value)));
+      Channels.update(el('xoChan').value, { hpf: v('xoChHpf'), lpf: v('xoChLpf'), slope: +el('xoSlope').value });
+    };
+    el('xoDefCh').onclick = () => { const c = Channels.get(el('xoChan').value); const d = Channels.XO[c.type]; Channels.update(c.id, { hpf: d.hpf, lpf: d.lpf }); };
+    el('xoLoadCh').onclick = () => {
+      const c = Channels.get(el('xoChan').value);
+      if (c.hpf && c.lpf) { el('xoType').value = 'bpf'; el('xoFreq').value = c.hpf; el('xoFreq2').value = c.lpf; }
+      else if (c.hpf) { el('xoType').value = 'hpf'; el('xoFreq').value = c.hpf; }
+      else if (c.lpf) { el('xoType').value = 'lpf'; el('xoFreq').value = c.lpf; }
+      else { bypass = true; updateInfo(); drawResponse(); play(); return; }
+      el('xoSlope').value = String(c.slope || 24);
+      bypass = false; updateInfo(); drawResponse(); play();
+    };
     updateInfo();
     drawResponse();
   }
@@ -39,7 +57,7 @@ const Xover = (() => {
     const f2 = +el('xoFreq2').value;
     const slope = +el('xoSlope').value;
     const sig = el('xoSig').value;
-    const route = 'stereo';
+    const route = Channels.routeFor(el('xoChan').value);
 
     let src;
     if (sig === 'pink' || sig === 'white') {

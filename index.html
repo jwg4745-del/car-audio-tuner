@@ -66,22 +66,25 @@
       <button type="button" class="btn btn-danger" id="btnStopAll">■ 全部停止</button>
     </div>
 
-    <!-- 通道选择 -->
-    <div class="channel-bar card-inline">
-      <span class="bar-title">通道选择</span>
-      <div class="channels" id="channelButtons" role="group" aria-label="扬声器通道">
-        <button type="button" class="ch active" data-ch="FL">前左 FL</button>
-        <button type="button" class="ch active" data-ch="FR">前右 FR</button>
-        <button type="button" class="ch" data-ch="RL">后左 RL</button>
-        <button type="button" class="ch" data-ch="RR">后右 RR</button>
-        <button type="button" class="ch" data-ch="C">中置 C</button>
-        <button type="button" class="ch" data-ch="SUB">超低音 SUB</button>
+    <!-- 12 通道选择 -->
+    <div class="channel-panel">
+      <div class="chp-head">
+        <span class="bar-title">12 通道</span>
+        <span class="ch-current" id="chCurrent"></span>
       </div>
+      <div class="ch-grid" id="chGrid" role="group" aria-label="12 通道"></div>
       <div class="ch-actions">
-        <button type="button" class="btn btn-ghost btn-sm" id="chAll">全开</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="chFront">仅前</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="chNone">全关</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="chSoloHint" title="单击切换；电脑 Shift+单击 / 手机长按 = 独奏">长按独奏</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chAll">全选</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chFront">前声场</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chNone">清空</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chEdit">✎ 编辑通道</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="chReset">恢复默认</button>
+      </div>
+      <p class="hint ch-hint">点按 = 选择/取消 · 长按（电脑 Shift+点击）= 独奏 · 🔈 = 静音。浏览器只有立体声输出，请在主机 / DSP 上切换到对应物理通道。</p>
+      <div class="ch-editor" id="chEditor" hidden>
+        <div class="ched-head"><span>通道</span><span>名称</span><span>声道</span><span>单元类型</span></div>
+        <div id="chEditorBody"></div>
+        <p class="hint">修改自动保存到本机（localStorage）。改单元类型会套用该类型的默认分频。</p>
       </div>
     </div>
 
@@ -93,6 +96,8 @@
       <button type="button" class="tab" data-tab="delay" role="tab">延时对齐</button>
       <button type="button" class="tab" data-tab="spl" role="tab">电平匹配</button>
       <button type="button" class="tab" data-tab="xover" role="tab">分频辅助</button>
+      <button type="button" class="tab" data-tab="plan" role="tab">通道方案</button>
+      <button type="button" class="tab" data-tab="analyze" role="tab">录音分析</button>
       <button type="button" class="tab" data-tab="log" role="tab">测量记录</button>
       <button type="button" class="tab" data-tab="help" role="tab">使用说明</button>
     </nav>
@@ -120,6 +125,7 @@
               </label>
               <label>路由
                 <select id="genRoute">
+                  <option value="follow" selected>跟随所选通道</option>
                   <option value="stereo">立体声 L+R</option>
                   <option value="l">仅左 L</option>
                   <option value="r">仅右 R</option>
@@ -284,10 +290,13 @@
             <h2>极性检测</h2>
             <p class="hint">向指定通道发正向脉冲，用麦克风看首波是正压还是负压，判断接线极性。</p>
             <div class="form-row">
-              <label>测试通道
+              <label>记录到通道
+                <select id="polChan" class="ch-select"></select>
+              </label>
+              <label>输出
                 <select id="polCh">
-                  <option value="l">左输出 L（测前左等）</option>
-                  <option value="r">右输出 R（测前右等）</option>
+                  <option value="l">左输出 L</option>
+                  <option value="r">右输出 R</option>
                   <option value="both">双声道同发</option>
                 </select>
               </label>
@@ -319,27 +328,10 @@
         <div class="panel-grid">
           <div class="card">
             <h2>延时 / 时域对齐</h2>
-            <p class="hint">Chirp + 互相关测相对延时。可按车用通道标签记录多路结果。</p>
+            <p class="hint">逐个通道播放 Chirp，麦克风放主驾头部，测出到达时间后「保存到通道」。最远（最晚）通道补偿 0，其余通道补延时。也可在「通道方案」直接填距离。</p>
             <div class="form-row">
-              <label>参考通道标签
-                <select id="delayRefLabel">
-                  <option value="FL">前左 FL</option>
-                  <option value="FR">前右 FR</option>
-                  <option value="RL">后左 RL</option>
-                  <option value="RR">后右 RR</option>
-                  <option value="C">中置 C</option>
-                  <option value="SUB">超低音 SUB</option>
-                </select>
-              </label>
-              <label>对比通道标签
-                <select id="delayCmpLabel">
-                  <option value="FR" selected>前右 FR</option>
-                  <option value="FL">前左 FL</option>
-                  <option value="RL">后左 RL</option>
-                  <option value="RR">后右 RR</option>
-                  <option value="C">中置 C</option>
-                  <option value="SUB">超低音 SUB</option>
-                </select>
+              <label>测量通道
+                <select id="delayChan" class="ch-select"></select>
               </label>
             </div>
             <div class="form-row">
@@ -361,7 +353,7 @@
             </div>
             <div class="btn-row">
               <button type="button" class="btn btn-primary" id="delayPlay">▶ 播放并测量</button>
-              <button type="button" class="btn btn-accent" id="delaySaveRow">保存到通道表</button>
+              <button type="button" class="btn btn-accent" id="delaySaveRow">保存到通道</button>
               <button type="button" class="btn btn-ghost" id="delayStop" disabled>■ 停止</button>
             </div>
             <div class="readouts three">
@@ -370,10 +362,8 @@
               <div class="readout"><span class="label">建议补偿</span><span class="value" id="delaySuggest">—</span></div>
             </div>
             <table class="data-table" id="delayTable">
-              <thead><tr><th>通道</th><th>延时 ms</th><th>距离 cm</th><th>建议补偿</th></tr></thead>
-              <tbody id="delayTableBody">
-                <tr><td colspan="4" class="muted">暂无记录 — 测量后点「保存到通道表」</td></tr>
-              </tbody>
+              <thead><tr><th>通道</th><th>实测 ms</th><th>等效 cm</th><th>补偿</th></tr></thead>
+              <tbody id="delayTableBody"></tbody>
             </table>
           </div>
           <div class="card chart-card">
@@ -397,15 +387,8 @@
                   <option value="none">无（仅听环境/音乐）</option>
                 </select>
               </label>
-              <label>通道标签
-                <select id="splLabel">
-                  <option value="FL">前左 FL</option>
-                  <option value="FR">前右 FR</option>
-                  <option value="RL">后左 RL</option>
-                  <option value="RR">后右 RR</option>
-                  <option value="C">中置 C</option>
-                  <option value="SUB">超低音 SUB</option>
-                </select>
+              <label>记录到通道
+                <select id="splLabel" class="ch-select"></select>
               </label>
             </div>
             <div class="btn-row">
@@ -422,10 +405,8 @@
               <div class="meter-bar"><div class="meter-fill" id="splMeter"></div></div>
             </div>
             <table class="data-table">
-              <thead><tr><th>通道</th><th>平均 dBFS</th><th>相对基准</th></tr></thead>
-              <tbody id="splTableBody">
-                <tr><td colspan="3" class="muted">暂无 — 对各通道单独播放后「记录」</td></tr>
-              </tbody>
+              <thead><tr><th>通道</th><th>平均 dBFS</th><th>相对最小</th><th>建议增益</th></tr></thead>
+              <tbody id="splTableBody"></tbody>
             </table>
           </div>
           <div class="card chart-card">
@@ -441,6 +422,22 @@
           <div class="card">
             <h2>分频辅助</h2>
             <p class="hint">Butterworth 高通/低通预览，听感确认分频点与斜率（无源/有源分频调校）。</p>
+            <div class="form-row">
+              <label>通道
+                <select id="xoChan" class="ch-select"></select>
+              </label>
+              <label>该通道 HPF Hz（空=无）
+                <input type="number" id="xoChHpf" min="10" max="20000" />
+              </label>
+              <label>该通道 LPF Hz（空=无）
+                <input type="number" id="xoChLpf" min="10" max="20000" />
+              </label>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-accent" id="xoSaveCh">保存到通道</button>
+              <button type="button" class="btn btn-ghost" id="xoLoadCh">按通道设置试听</button>
+              <button type="button" class="btn btn-ghost" id="xoDefCh">套用单元默认</button>
+            </div>
             <div class="form-row">
               <label>滤波器
                 <select id="xoType">
@@ -512,6 +509,86 @@
       </section>
 
       <!-- 9. 说明 -->
+      <!-- 12 通道方案 -->
+      <section id="panel-plan" class="panel" role="tabpanel" hidden>
+        <div class="card">
+          <h2>12 通道调音方案</h2>
+          <p class="hint">汇总每个通道的延时补偿、增益修正、极性、分频，照抄到 DSP 即可。距离可直接填写（扬声器到主驾头部，cm），会覆盖实测延时；延时以最远通道为 0。增益修正以最安静通道为基准（只衰减不提升）。</p>
+          <div class="table-scroll">
+            <table class="data-table plan-table">
+              <thead><tr><th>通道</th><th>距离 cm</th><th>实测 ms</th><th>延时补偿</th><th>增益修正</th><th>极性</th><th>分频</th></tr></thead>
+              <tbody id="planBody"></tbody>
+            </table>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="planCsv">导出 CSV</button>
+            <button type="button" class="btn btn-accent" id="planJson">导出 JSON</button>
+            <button type="button" class="btn btn-ghost" id="planClear">清空测量值</button>
+          </div>
+          <div class="tip-box"><strong>说明：</strong>浏览器只能输出立体声（左/右）。测某个通道时，请在主机 / DSP 里只打开该物理通道（或静音其他通道），本工具按通道的「声道侧」把信号送到左或右，并记录每个通道的结果。</div>
+        </div>
+      </section>
+
+      <!-- 录音分析 -->
+      <section id="panel-analyze" class="panel" role="tabpanel" hidden>
+        <div class="card">
+          <h2>录音分析</h2>
+          <p class="hint">上传一段车内录音（WAV / MP3 / M4A / OGG / WebM），或直接用麦克风录制，自动分析电平、频响、问题频点、立体声与 EQ 建议。全部在本机浏览器内完成，不上传。</p>
+          <label class="drop-zone" id="anDrop">
+            <input type="file" id="anFile" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm,.flac" hidden />
+            <span class="drop-ico">📂</span>
+            <span><strong>点击选择音频文件</strong><br /><small>电脑可直接拖拽到此处 · 手机可从「文件」/ 语音备忘录选择 · 最长分析 5 分钟</small></span>
+          </label>
+          <div class="form-row">
+            <label>录音对应通道
+              <select id="anChan" class="ch-select" data-extra="整车 / 多通道"></select>
+            </label>
+            <label>或录制秒数
+              <input type="number" id="anRecSec" min="2" max="60" value="10" />
+            </label>
+            <label>目标曲线
+              <select id="anTarget">
+                <option value="flat">平直 Flat</option>
+                <option value="house" selected>轻度 House</option>
+                <option value="car">车用偏暖 Warm</option>
+                <option value="xcurve">X-Curve 近似</option>
+                <option value="none">无（仅看形状）</option>
+              </select>
+            </label>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-accent btn-touch" id="anRec">🎙 录制并分析</button>
+          </div>
+          <div class="meter-bar"><div class="meter-fill an-prog" id="anProgress"></div></div>
+          <p class="unlock-status" id="anStatus">等待音频…</p>
+        </div>
+        <div id="anResults" hidden>
+          <div class="panel-grid an-grid">
+            <div class="card"><h3>基本信息</h3><div class="readouts an-readouts" id="anInfo"></div></div>
+            <div class="card chart-card"><h3>波形总览（红线 = 满幅）</h3><canvas id="anWave" width="640" height="160"></canvas></div>
+          </div>
+          <div class="card chart-card an-block">
+            <h3>平均频谱（Welch）+ 1/3 倍频程 · 黄虚线 = 目标 · 红柱 = 偏差 &gt; ±4 dB</h3>
+            <canvas id="anSpec" width="640" height="320"></canvas>
+          </div>
+          <div class="panel-grid an-grid">
+            <div class="card"><h3>频段平衡（相对目标）</h3><div class="readouts an-readouts" id="anBalance"></div>
+              <h3 style="margin-top:1rem">立体声</h3><div class="readouts an-readouts" id="anStereo"></div></div>
+            <div class="card"><h3>发现的问题</h3><ul class="help-list an-list" id="anProblems"></ul></div>
+          </div>
+          <div class="panel-grid an-grid">
+            <div class="card"><h3>建议参数 EQ（±6 dB 上限）</h3>
+              <table class="data-table"><thead><tr><th>#</th><th>频率</th><th>增益</th><th>Q</th></tr></thead><tbody id="anEq"></tbody></table></div>
+            <div class="card"><h3>调音建议（仅供参考）</h3><ul class="help-list an-list" id="anTips"></ul>
+              <div class="btn-row">
+                <button type="button" class="btn btn-primary" id="anExportJson">导出 JSON</button>
+                <button type="button" class="btn btn-ghost" id="anExportTxt">导出 TXT</button>
+                <button type="button" class="btn btn-ghost" id="anExportCsv">导出 CSV</button>
+              </div></div>
+          </div>
+        </div>
+      </section>
+
       <section id="panel-help" class="panel" role="tabpanel" hidden>
         <div class="card help-card">
           <h2>使用说明</h2>
@@ -519,7 +596,8 @@
             <li><strong>手机打开：</strong>用手机浏览器访问部署地址（须 <strong>HTTPS</strong>）。iOS Safari 不支持明文 HTTP 的麦克风。可「添加到主屏幕」以类 App 全屏使用（PWA）。</li>
             <li><strong>解锁音频：</strong>进入页面后先点「点击解锁音频」，再点「授权麦克风」。iOS 必须在用户手势内启动 AudioContext。</li>
             <li><strong>电脑打开：</strong>在本目录执行 <code>python3 -m http.server 8080</code>，访问 <code>http://localhost:8080</code>。</li>
-            <li><strong>通道：</strong>上方选择车用通道标签；单击切换，<strong>长按</strong>（手机）或 Shift+单击（电脑）为独奏。实际 L/R 由「路由」决定。</li>
+            <li><strong>12 通道：</strong>默认按常见 12 路 DSP 排列（CH1–CH6 前左/右 高中低音，CH7 中置，CH8/9 后左右，CH10/11 超低音左右，CH12 备用/环绕）。名称、声道侧和单元类型可在「编辑通道」修改，并保存在本机。点按选择，长按独奏，🔈 静音。</li>
+            <li><strong>重要：</strong>浏览器只输出立体声，测试某个通道时请在主机 / DSP 上切换或只打开对应物理通道；本工具按通道声道侧送左/右信号，并逐通道记录延时、电平、极性、分频，汇总在「通道方案」。</li>
             <li><strong>信号发生器：</strong>正弦/扫频/粉红/白噪/猝发/脉冲，调音基础激励。</li>
             <li><strong>RTA：</strong>接麦看实时频谱，可叠加 Flat / House / 车用偏暖目标曲线辅助 EQ。</li>
             <li><strong>相位：</strong>低音同相/反相对比；有麦可估算相位差。</li>
@@ -527,6 +605,7 @@
             <li><strong>延时：</strong>Chirp 互相关得 ms 与 cm，写入通道表后在 DSP 填补偿。</li>
             <li><strong>电平：</strong>相对 dBFS 匹配各通道增益（非校准声压计）。</li>
             <li><strong>分频：</strong>Butterworth 12/24 dB 听感确认分频点。</li>
+            <li><strong>录音分析：</strong>上传车内录音或直接录制 N 秒，自动给出电平/削波、1/3 倍频程偏差、共振、刺耳/齿音、立体声相关度与时间差，以及最多 8 段参数 EQ 建议（±6 dB）。建议用粉红噪声或熟悉的音乐，麦克风放在主驾头部位置。超过 5 分钟只分析前 5 分钟。iOS 可从「文件」选择语音备忘录导出的 m4a。</li>
             <li><strong>安全：</strong>主电平默认 12%，先低后高。</li>
           </ol>
           <h3>局限</h3>
@@ -559,6 +638,8 @@
     <button type="button" class="more-item" data-tab="polarity">极性检测</button>
     <button type="button" class="more-item" data-tab="spl">电平匹配</button>
     <button type="button" class="more-item" data-tab="xover">分频辅助</button>
+    <button type="button" class="more-item" data-tab="plan">12 通道方案</button>
+    <button type="button" class="more-item" data-tab="analyze">录音分析</button>
     <button type="button" class="more-item" data-tab="log">测量记录</button>
     <button type="button" class="more-item" data-tab="help">使用说明</button>
     <button type="button" class="more-item more-close" id="moreClose">关闭</button>
@@ -574,6 +655,7 @@
   <script src="js/spl.js"></script>
   <script src="js/xover.js"></script>
   <script src="js/logger.js"></script>
+  <script src="js/analyzer.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

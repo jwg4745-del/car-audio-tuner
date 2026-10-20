@@ -10,6 +10,8 @@ const SPL = (() => {
   function el(id) { return document.getElementById(id); }
 
   function init() {
+    Channels.onChange(renderTable);
+    setTimeout(renderTable, 0);
     el('splStart').onclick = start;
     el('splStop').onclick = stop;
     el('splCapture').onclick = capture;
@@ -91,26 +93,17 @@ const SPL = (() => {
   }
 
   function capture() {
-    const label = el('splLabel').value;
-    const avg = avgN ? avgAcc / avgN : parseFloat(el('splAvg').textContent);
+    const avg = avgN ? avgAcc / avgN : NaN;
     if (!isFinite(avg)) { alert('请先开始监测'); return; }
-    levels[label] = avg;
-    renderTable();
+    Channels.update(el('splLabel').value, { levelDb: avg });
   }
 
   function renderTable() {
     const body = el('splTableBody');
-    const keys = Object.keys(levels);
-    if (!keys.length) {
-      body.innerHTML = '<tr><td colspan="3" class="muted">暂无</td></tr>';
-      return;
-    }
-    const base = Math.max(...keys.map((k) => levels[k]));
-    body.innerHTML = keys.map((k) => {
-      const v = levels[k];
-      const rel = v - base;
-      return `<tr><td>${k}</td><td>${v.toFixed(1)}</td><td>${rel.toFixed(1)} dB</td></tr>`;
-    }).join('');
+    if (!body) return;
+    const g = Channels.gainPlan();
+    const html = Channels.getAll().map((c, i) => g[i] ? `<tr><td>CH${c.id} ${c.name}</td><td>${c.levelDb.toFixed(1)}</td><td>+${g[i].rel.toFixed(1)} dB</td><td>${g[i].trim.toFixed(1)} dB</td></tr>` : '').join('');
+    body.innerHTML = html || '<tr><td colspan="4" class="muted">暂无 — 每个通道单独播放后「记录当前通道」</td></tr>';
   }
 
   function drawHistory() {
@@ -147,12 +140,8 @@ const SPL = (() => {
     c.fillText('相对电平（未校准 dBFS）', 20, 30);
   }
 
-  function getSnapshot() { return { levels: { ...levels }, lastAvg: el('splAvg').textContent }; }
-  function loadLevels(data) {
-    Object.keys(levels).forEach((k) => delete levels[k]);
-    if (data) Object.assign(levels, data);
-    renderTable();
-  }
+  function getSnapshot() { return { levels: Channels.getAll().filter((c) => c.levelDb != null).map((c) => ({ ch: c.id, name: c.name, levelDb: c.levelDb })), lastAvg: el('splAvg').textContent }; }
+  function loadLevels() { renderTable(); }
 
   return { init, start, stop, getSnapshot, loadLevels };
 })();

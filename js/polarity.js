@@ -5,6 +5,7 @@ const Polarity = (() => {
   function el(id) { return document.getElementById(id); }
 
   function init() {
+    el('polChan').addEventListener('change', () => { const r = Channels.routeFor(el('polChan').value); el('polCh').value = r === 'stereo' ? 'both' : r; });
     el('polFire').onclick = () => fire(false);
     el('polMeasure').onclick = () => fire(true);
     el('polStop').onclick = () => {
@@ -98,10 +99,12 @@ const Polarity = (() => {
       res.textContent = '正极性 +';
       res.className = 'value status ok';
       adv.textContent = '接线正常';
+      Channels.update(el('polChan').value, { polarity: '正 +' });
     } else {
       res.textContent = '反极性 −';
       res.className = 'value status bad';
       adv.textContent = '检查正负极';
+      Channels.update(el('polChan').value, { polarity: '反 −' });
     }
     drawCapture(d, firstI, winPeak);
   }

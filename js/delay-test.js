@@ -13,6 +13,9 @@ const DelayTest = (() => {
       el('delayPlay').disabled = false;
     };
     el('delaySaveRow').onclick = saveRow;
+    el('delayChan').addEventListener('change', () => { const r = Channels.routeFor(el('delayChan').value); el('delayOut').value = r === 'stereo' ? 'l' : r; });
+    Channels.onChange(renderTable);
+    renderTable();
   }
 
   async function measure() {
@@ -75,8 +78,7 @@ const DelayTest = (() => {
 
     // Store as relative to "this measurement"; suggestion: if this channel is closer (smaller delay), add delay
     last = {
-      label: el('delayCmpLabel').value,
-      refLabel: el('delayRefLabel').value,
+      label: Channels.label(el('delayChan').value),
       ms,
       cm,
       lag: xc.bestLag,
@@ -95,39 +97,16 @@ const DelayTest = (() => {
   }
 
   function saveRow() {
-    if (!last) {
-      alert('请先测量');
-      return;
-    }
-    const label = el('delayCmpLabel').value;
-    const speed = +el('soundSpeed').value || 343;
-    rows[label] = {
-      ms: last.ms,
-      cm: last.cm,
-      suggest: last.ms < 0 ? `+${(-last.ms).toFixed(2)} ms` : '作参考/较远',
-    };
-    // Also store ref if empty
-    if (!rows[el('delayRefLabel').value]) {
-      rows[el('delayRefLabel').value] = { ms: 0, cm: 0, suggest: '参考 0' };
-    }
-    renderTable();
+    if (!last) { alert('请先测量'); return; }
+    Channels.update(el('delayChan').value, { delayMs: last.ms, distCm: null });
   }
 
   function renderTable() {
     const body = el('delayTableBody');
-    const keys = Object.keys(rows);
-    if (!keys.length) {
-      body.innerHTML = '<tr><td colspan="4" class="muted">暂无记录</td></tr>';
-      return;
-    }
-    // Normalize: farthest (max ms) = 0 delay compensation, others get (max-ms)
-    let maxMs = -Infinity;
-    keys.forEach((k) => { maxMs = Math.max(maxMs, rows[k].ms); });
-    body.innerHTML = keys.map((k) => {
-      const r = rows[k];
-      const comp = (maxMs - r.ms);
-      return `<tr><td>${k}</td><td>${r.ms.toFixed(2)}</td><td>${r.cm.toFixed(1)}</td><td>+${comp.toFixed(2)} ms</td></tr>`;
-    }).join('');
+    if (!body) return;
+    const plan = Channels.delayPlan();
+    const rowsHtml = Channels.getAll().map((c, i) => plan[i] ? `<tr><td>CH${c.id} ${c.name}</td><td>${plan[i].ms.toFixed(2)}</td><td>${(plan[i].ms * 34.3).toFixed(1)}</td><td>+${plan[i].comp.toFixed(2)} ms</td></tr>` : '').join('');
+    body.innerHTML = rowsHtml || '<tr><td colspan="4" class="muted">暂无 — 测量后点「保存到通道」</td></tr>';
   }
 
   function drawXc(xc, sr, speed) {
@@ -156,16 +135,9 @@ const DelayTest = (() => {
     c.fillText(`峰值 lag=${xc.bestLag} samples (${(xc.bestLag/sr*1000).toFixed(2)} ms)`, 12, 20);
   }
 
-  function getRows() { return { ...rows }; }
-  function getSnapshot() {
-    return { last, rows: getRows() };
-  }
-  function loadRows(data) {
-    Object.keys(rows).forEach((k) => delete rows[k]);
-    if (data) Object.assign(rows, data);
-    last = null;
-    renderTable();
-  }
+  function getRows() { return Channels.planRows().filter((r) => r.measuredDelayMs != null || r.distCm != null); }
+  function getSnapshot() { return { last, rows: getRows() }; }
+  function loadRows() { renderTable(); }
 
   return { init, measure, getSnapshot, getRows, loadRows };
 })();

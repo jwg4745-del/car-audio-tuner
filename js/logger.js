@@ -7,8 +7,7 @@ const Logger = (() => {
     el('logSaveCsv').onclick = () => download(buildCsv(), 'car-audio-tune-' + stamp() + '.csv', 'text/csv');
     el('logImport').onchange = onImport;
     el('logClear').onclick = () => {
-      DelayTest.loadRows({});
-      SPL.loadLevels({});
+      Channels.getAll().forEach((c) => Channels.update(c.id, { delayMs: null, distCm: null, levelDb: null, polarity: '未测' }));
       preview();
     };
     preview();
@@ -26,12 +25,15 @@ const Logger = (() => {
       version: 1,
       savedAt: new Date().toISOString(),
       timezoneNote: 'Asia/Shanghai',
-      channels: Channels.getActive(),
+      selectedChannels: Channels.getActive(),
+      channels12: Channels.getAll(),
+      plan: Channels.planRows(),
       phase: PhaseTest.getSnapshot(),
       polarity: Polarity.getSnapshot(),
       delay: DelayTest.getSnapshot(),
       spl: SPL.getSnapshot(),
       rta: RTA.getSnapshot(),
+      recordingAnalysis: (typeof Analyzer !== 'undefined') ? Analyzer.getSnapshot() : null,
       masterLevel: AudioEngine.getMasterLevel(),
     };
   }
@@ -74,8 +76,8 @@ const Logger = (() => {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (data.delay && data.delay.rows) DelayTest.loadRows(data.delay.rows);
-        if (data.spl && data.spl.levels) SPL.loadLevels(data.spl.levels);
+        if (Array.isArray(data.channels12)) Channels.setAll(data.channels12);
+        else if (Array.isArray(data.channels) && data.channels.length === 12 && data.channels[0].name) Channels.setAll(data.channels);
         el('logPreview').textContent = '已导入：\n' + JSON.stringify(data, null, 2);
       } catch (err) {
         alert('导入失败：' + err.message);

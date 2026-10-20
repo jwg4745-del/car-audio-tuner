@@ -471,3 +471,47 @@ select, input[type="number"], input[type="text"], textarea {
 @media (display-mode: standalone) {
   .app { padding-top: max(1rem, env(safe-area-inset-top)); }
 }
+
+/* 录音分析 */
+.drop-zone { display:flex; align-items:center; gap:.9rem; border:2px dashed var(--border); border-radius:var(--radius); padding:1.2rem; margin-bottom:.9rem; cursor:pointer; color:var(--muted); min-height:88px; }
+.drop-zone:hover, .drop-zone.over { border-color:var(--accent); background:rgba(88,166,255,.08); color:var(--text); }
+.drop-ico { font-size:2rem; }
+.an-prog { background:var(--accent); transition:width .2s; }
+.an-block, .an-grid { margin-top:1rem; }
+.an-readouts { grid-template-columns:repeat(2,1fr); }
+.readout .value.small { font-size:1rem; word-break:break-all; }
+.value.warnc { color:var(--warn); } .value.badc { color:var(--danger); } .value.okc { color:var(--accent2); }
+.an-list li { margin-bottom:.45rem; }
+.tag { display:inline-block; font-size:.72rem; padding:.05rem .4rem; border-radius:4px; margin-right:.4rem; }
+.tag-peak { background:rgba(248,81,73,.2); color:#ff7b72; } .tag-dip { background:rgba(88,166,255,.2); color:var(--accent); }
+
+/* 12 通道 */
+.channel-panel { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem 1rem; margin-bottom:.85rem; }
+.chp-head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; margin-bottom:.6rem; flex-wrap:wrap; }
+.ch-current { font-size:.82rem; color:var(--accent); }
+.ch-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:.4rem; }
+.chc { display:flex; border:1px solid var(--border); border-radius:8px; background:var(--bg3); overflow:hidden; min-width:0; }
+.chc.sel { border-color:var(--accent); background:rgba(88,166,255,.15); }
+.chc.solo { border-color:var(--accent2); background:rgba(63,185,80,.16); }
+.chc.muted { opacity:.5; }
+.chc-main { flex:1; min-width:0; background:none; border:0; color:var(--text); font-family:inherit; text-align:left; padding:.4rem .5rem; min-height:52px; cursor:pointer; display:flex; flex-direction:column; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
+.chc-main b { font-size:.72rem; color:var(--muted); font-family:var(--mono); }
+.chc.sel .chc-main b { color:var(--accent); }
+.chc-main span { font-size:.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chc-main small { font-size:.68rem; color:var(--muted); }
+.chc-mute { width:34px; background:rgba(0,0,0,.2); border:0; border-left:1px solid var(--border); cursor:pointer; font-size:.95rem; min-height:44px; }
+.ch-hint { margin:.5rem 0 0 !important; font-size:.76rem !important; }
+.channel-panel .ch-actions { margin-top:.55rem; }
+.ch-editor { margin-top:.7rem; border-top:1px solid var(--border); padding-top:.6rem; }
+.ched-head, .ched-row { display:grid; grid-template-columns:48px 1fr 84px 92px; gap:.4rem; align-items:center; margin-bottom:.35rem; }
+.ched-head { font-size:.75rem; color:var(--muted); }
+.ched-row b { font-family:var(--mono); font-size:.8rem; color:var(--muted); }
+.ched-row input, .ched-row select, .plan-in { background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:.4rem .5rem; font-family:inherit; min-width:0; width:100%; }
+.table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.plan-table { display:table !important; min-width:640px; }
+.plan-table td { vertical-align:middle; }
+.plan-table td.hl { color:var(--accent2); font-family:var(--mono); }
+.plan-table .plan-in { width:80px; font-size:16px; }
+.row-muted { opacity:.55; }
+@media (max-width: 920px) { .ch-grid { grid-template-columns:repeat(4,1fr); } }
+@media (max-width: 520px) { .ch-grid { grid-template-columns:repeat(3,1fr); } .chc-main { padding:.35rem .4rem; } .chc-mute { width:30px; } .ched-head, .ched-row { grid-template-columns:40px 1fr 70px 76px; } }

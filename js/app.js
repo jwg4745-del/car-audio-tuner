@@ -9,6 +9,8 @@ const App = (() => {
     delayCanvas: 640 / 280,
     splCanvas: 640 / 280,
     xoCanvas: 640 / 280,
+    anWave: 640 / 160,
+    anSpec: 640 / 320,
   };
 
   function el(id) { return document.getElementById(id); }
@@ -111,6 +113,7 @@ const App = (() => {
       el('xoType').dispatchEvent(new Event('change'));
     }
     fitCanvases();
+    if (name === 'analyze') Analyzer.redraw();
   }
 
   function initTabs() {
@@ -209,6 +212,10 @@ const App = (() => {
     SPL.init();
     Xover.init();
     Logger.init();
+    Analyzer.init();
+    el('planCsv').onclick = () => Channels.exportPlan('csv');
+    el('planJson').onclick = () => Channels.exportPlan('json');
+    el('planClear').onclick = () => { if (confirm('清空所有通道的延时/距离/电平/极性测量值？')) Channels.getAll().forEach((c) => Channels.update(c.id, { delayMs: null, distCm: null, levelDb: null, polarity: '未测' })); };
 
     el('btnMic').onclick = connectMic;
     el('btnStopAll').onclick = stopAll;
@@ -218,7 +225,7 @@ const App = (() => {
     if (btnMicUnlock) btnMicUnlock.onclick = connectMic;
 
     fitCanvases();
-    window.addEventListener('resize', fitCanvases);
+    window.addEventListener('resize', () => { fitCanvases(); Analyzer.redraw(); });
     window.addEventListener('orientationchange', () => setTimeout(fitCanvases, 200));
 
     registerSW();

@@ -30,7 +30,9 @@ const Generator = (() => {
 
     const type = el('genType').value;
     const hz = +el('genHz').value || 1000;
-    const route = el('genRoute').value === 'mono' ? 'stereo' : el('genRoute').value;
+    if (Channels.allSelectedMuted()) { stop(); el('genStatus').textContent = '所选通道已静音'; el('genStatus').className = 'value status warn'; return; }
+    const rv = el('genRoute').value;
+    const route = rv === 'follow' ? Channels.suggestRoute() : rv === 'mono' ? 'stereo' : rv;
     const dur = +el('genDur').value || 8;
 
     let src;

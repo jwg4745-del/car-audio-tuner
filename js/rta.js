@@ -254,5 +254,5 @@ const RTA = (() => {
     };
   }
 
-  return { init, start, stop, getSnapshot };
+  return { init, start, stop, getSnapshot, targetDb };
 })();

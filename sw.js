@@ -1,5 +1,5 @@
 /* 汽车音响调音 — 离线静态壳 */
-const CACHE = 'car-audio-tuner-v8';
+const CACHE = 'car-audio-tuner-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const ASSETS = [
   './js/xover.js',
   './js/logger.js',
   './js/testtrack.js',
+  './js/simple.js',
   './js/analyzer.js',
   './js/tuneplan.js',
   './assets/icon-192.png',

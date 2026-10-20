@@ -96,7 +96,7 @@ const App = (() => {
       else p.setAttribute('hidden', '');
     });
 
-    const primary = new Set(['gen', 'rta', 'phase', 'delay']);
+    const primary = new Set(['simple', 'gen', 'rta', 'phase']);
     document.querySelectorAll('.bnav').forEach((b) => {
       if (b.dataset.tab === 'more') {
         b.classList.toggle('active', !primary.has(name));
@@ -291,6 +291,7 @@ const App = (() => {
     Logger.init();
     Analyzer.init();
     if (typeof TestTrack !== 'undefined') TestTrack.init();
+    if (typeof Simple !== 'undefined') Simple.init();
     TunePlan.init();
     el('planCsv').onclick = () => Channels.exportPlan('csv');
     el('planJson').onclick = () => Channels.exportPlan('json');

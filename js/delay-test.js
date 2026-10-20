@@ -98,6 +98,7 @@ const DelayTest = (() => {
 
   function saveRow() {
     if (!last) { alert('请先测量'); return; }
+    Channels.getAll().forEach((c) => { if (c.delaySetMs != null) Channels.update(c.id, { delaySetMs: null }); });
     Channels.update(el('delayChan').value, { delayMs: last.ms, distCm: null });
   }
 

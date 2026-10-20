@@ -95,6 +95,7 @@ const SPL = (() => {
   function capture() {
     const avg = avgN ? avgAcc / avgN : NaN;
     if (!isFinite(avg)) { alert('请先开始监测'); return; }
+    Channels.getAll().forEach((c) => { if (c.gainSetDb != null) Channels.update(c.id, { gainSetDb: null }); });
     Channels.update(el('splLabel').value, { levelDb: avg });
   }
 

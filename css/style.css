@@ -660,3 +660,11 @@ body.role-player #btnMic{display:none}
 .duo-adv{margin-top:8px;opacity:.85}
 .duo-adv-toggle{margin-top:16px}
 .rta-duo{margin-bottom:10px}
+
+.mic-pick{margin:10px 0;padding:14px;display:flex;flex-direction:column;gap:8px}
+.mic-info{font-size:14px;opacity:.85}
+.mic-meter{height:10px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden}
+.mic-meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2fd3a5,#f0b429,#ff4d5e);transition:width .08s linear}
+.mic-hdr{display:none}
+body.has-mic-pick .mic-hdr{display:inline-flex}
+body.role-player #micPickBox{display:none}

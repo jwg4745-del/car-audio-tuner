@@ -213,9 +213,10 @@ const App = (() => {
     Xover.init();
     Logger.init();
     Analyzer.init();
+    TunePlan.init();
     el('planCsv').onclick = () => Channels.exportPlan('csv');
     el('planJson').onclick = () => Channels.exportPlan('json');
-    el('planClear').onclick = () => { if (confirm('清空所有通道的延时/距离/电平/极性测量值？')) Channels.getAll().forEach((c) => Channels.update(c.id, { delayMs: null, distCm: null, levelDb: null, polarity: '未测' })); };
+    el('planClear').onclick = () => { if (confirm('清空所有通道的延时/距离/电平/极性测量值？')) Channels.getAll().forEach((c) => Channels.update(c.id, { delayMs: null, distCm: null, levelDb: null, polarity: '未测', gainSetDb: null, delaySetMs: null, invert: false, eq: [] })); };
 
     el('btnMic').onclick = connectMic;
     el('btnStopAll').onclick = stopAll;

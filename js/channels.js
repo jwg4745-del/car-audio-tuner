@@ -146,8 +146,9 @@ const Channels = (() => {
     return chs.map((c, i) => ({
       ch: 'CH' + c.id, name: c.name, side: SIDE_CN[c.side], type: TYPE_CN[c.type], mute: c.mute ? '是' : '否',
       distCm: c.distCm, measuredDelayMs: c.delayMs != null ? +c.delayMs.toFixed(3) : null,
-      delayCompMs: d[i] ? +d[i].comp.toFixed(2) : null, levelDb: c.levelDb != null ? +c.levelDb.toFixed(1) : null,
-      gainTrimDb: g[i] ? +g[i].trim.toFixed(1) : null, polarity: c.polarity, hpf: c.hpf, lpf: c.lpf, slope: c.slope, crossover: xoText(c),
+      delayCompMs: c.delaySetMs != null ? c.delaySetMs : d[i] ? +d[i].comp.toFixed(2) : null, levelDb: c.levelDb != null ? +c.levelDb.toFixed(1) : null,
+      gainTrimDb: c.gainSetDb != null ? c.gainSetDb : g[i] ? +g[i].trim.toFixed(1) : null, polarity: c.polarity, invert: c.invert ? '是' : '否',
+      eq: (c.eq || []).map((e) => `${e.freq}Hz ${e.gain}dB Q${e.q}`).join('; '), hpf: c.hpf, lpf: c.lpf, slope: c.slope, crossover: xoText(c),
     }));
   }
 
@@ -160,13 +161,14 @@ const Channels = (() => {
         <td><b>CH${c.id}</b> ${esc(c.name)}<br><small>${SIDE_CN[c.side]}·${TYPE_CN[c.type]}${c.mute ? ' · 静音' : ''}</small></td>
         <td><input type="number" class="plan-in" data-id="${c.id}" data-f="distCm" value="${c.distCm ?? ''}" placeholder="cm" min="0" max="500" /></td>
         <td>${c.delayMs != null ? f2(c.delayMs) : '—'}</td>
-        <td class="hl">${d[i] ? '+' + f2(d[i].comp) + ' ms' : '—'}</td>
-        <td>${g[i] ? (g[i].trim > 0 ? '+' : '') + f2(g[i].trim, 1) + ' dB' : '—'}</td>
-        <td>${esc(c.polarity)}</td>
+        <td class="hl">${c.delaySetMs != null ? '+' + f2(c.delaySetMs) + ' ms<small> 方案</small>' : d[i] ? '+' + f2(d[i].comp) + ' ms' : '—'}</td>
+        <td>${c.gainSetDb != null ? (c.gainSetDb > 0 ? '+' : '') + f2(c.gainSetDb, 1) + ' dB<small> 方案</small>' : g[i] ? (g[i].trim > 0 ? '+' : '') + f2(g[i].trim, 1) + ' dB' : '—'}</td>
+        <td>${c.invert ? '<b class="badc">反相</b><br><small>' + esc(c.polarity) + '</small>' : esc(c.polarity)}</td>
         <td>${xoText(c)}</td>
+        <td>${(c.eq && c.eq.length) ? `<details><summary>${c.eq.length} 段</summary>${c.eq.map((e) => `${e.freq}Hz ${e.gain > 0 ? '+' : ''}${e.gain}dB Q${e.q}`).join('<br>')}</details>` : '—'}</td>
       </tr>`).join('');
     body.querySelectorAll('.plan-in').forEach((i) => {
-      i.onchange = () => update(+i.dataset.id, { distCm: i.value === '' ? null : +i.value, ...(i.value !== '' ? { delayMs: null } : {}) });
+      i.onchange = () => update(+i.dataset.id, { distCm: i.value === '' ? null : +i.value, delaySetMs: null, ...(i.value !== '' ? { delayMs: null } : {}) });
     });
   }
 
@@ -175,8 +177,8 @@ const Channels = (() => {
     let text, mime;
     if (kind === 'json') { text = JSON.stringify({ app: '汽车音响调音 · 12 通道方案', savedAt: new Date().toISOString(), channels: rows }, null, 2); mime = 'application/json'; }
     else {
-      const head = ['通道', '名称', '声道', '类型', '静音', '距离cm', '实测延时ms', '延时补偿ms', '相对电平dB', '增益修正dB', '极性', 'HPF', 'LPF', '斜率dB/oct'];
-      const keys = ['ch', 'name', 'side', 'type', 'mute', 'distCm', 'measuredDelayMs', 'delayCompMs', 'levelDb', 'gainTrimDb', 'polarity', 'hpf', 'lpf', 'slope'];
+      const head = ['通道', '名称', '声道', '类型', '静音', '距离cm', '实测延时ms', '延时补偿ms', '相对电平dB', '增益修正dB', '极性', '反相', 'HPF', 'LPF', '斜率dB/oct', 'EQ'];
+      const keys = ['ch', 'name', 'side', 'type', 'mute', 'distCm', 'measuredDelayMs', 'delayCompMs', 'levelDb', 'gainTrimDb', 'polarity', 'invert', 'hpf', 'lpf', 'slope', 'eq'];
       text = [head.join(','), ...rows.map((r) => keys.map((k) => `"${String(r[k] ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
       mime = 'text/csv';
     }

@@ -33,6 +33,7 @@ const Logger = (() => {
       delay: DelayTest.getSnapshot(),
       spl: SPL.getSnapshot(),
       rta: RTA.getSnapshot(),
+      tuningPlan: (typeof TunePlan !== 'undefined') ? TunePlan.getSnapshot() : null,
       recordingAnalysis: (typeof Analyzer !== 'undefined') ? Analyzer.getSnapshot() : null,
       masterLevel: AudioEngine.getMasterLevel(),
     };

@@ -317,6 +317,7 @@ const Analyzer = (() => {
 
     report = {
       app: '汽车音响调音 · 录音分析', createdAt: new Date().toISOString(),
+      channelId: el('anChan').value ? +el('anChan').value : null,
       channel: el('anChan').value ? Channels.label(el('anChan').value) : '整车 / 多通道',
       file: c.label, durationSec: +c.duration.toFixed(2), analyzedSec: +c.analyzedSec.toFixed(2), truncated: c.truncated,
       sampleRate: c.sr, channels: c.nCh, targetCurve: curve,
@@ -328,6 +329,7 @@ const Analyzer = (() => {
     };
     cache.bands = bands;
     render();
+    if (typeof TunePlan !== 'undefined') TunePlan.onAnalysis(report);
   }
 
   function fmtF(f) { return f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 0 : 1) + ' kHz' : Math.round(f) + ' Hz'; }

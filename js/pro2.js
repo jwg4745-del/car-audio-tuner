@@ -252,7 +252,7 @@ const Listen = (() => {
   }
   async function play(k) {
     if (cur) { try { cur.src.stop(); } catch (_) {} const was = cur.k; cur = null; renderBtns(); if (was === k) return; }
-    const c = CLIPS[k], b = c.make(); await AudioEngine.resume(true);
+    const c = CLIPS[k], b = c.make(); AudioEngine.unlockSync(); await AudioEngine.resume();
     const ctx = AudioEngine.getCtx(), buf = ctx.createBuffer(2, b.L.length, SR); buf.copyToChannel(b.L, 0); buf.copyToChannel(b.R, 1);
     const src = ctx.createBufferSource(); src.buffer = buf; src.loop = $('lsLoop').checked; src.connect(ctx.destination); src.start();
     cur = { src, k }; src.onended = () => { if (cur && cur.src === src) { cur = null; renderBtns(); } }; renderBtns();

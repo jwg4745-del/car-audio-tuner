@@ -54,7 +54,7 @@ const TunePlan = (() => {
     const sys = A.all || null;
     const anOf = (c) => A[c.id] || null;
     const per = {};
-    chs.forEach((c) => { per[c.id] = { id: c.id, name: c.name, side: c.side, type: c.type, gainDb: 0, gainSrc: '默认值', invert: false, hpf: c.hpf, lpf: c.lpf, slope: c.slope || 24, delayMs: 0, delaySrc: '默认值', eq: [] }; });
+    chs.forEach((c) => { per[c.id] = { id: c.id, name: c.name, side: c.side, type: c.type, gainDb: c.gainSetDb != null ? c.gainSetDb : 0, gainSrc: c.gainSetDb != null ? '预设' : '默认值', invert: !!c.invert, hpf: c.hpf, lpf: c.lpf, slope: c.slope || 24, delayMs: c.delaySetMs != null ? c.delaySetMs : 0, delaySrc: c.delaySetMs != null ? '预设' : '默认值', eq: (c.eq || []).map((e) => ({ ...e })) }; });
     const steps = [];
 
     // 1. 增益

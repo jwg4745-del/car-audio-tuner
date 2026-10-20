@@ -299,7 +299,7 @@ const App = (() => {
     if (typeof TestTrack !== 'undefined') TestTrack.init();
     if (typeof Simple !== 'undefined') Simple.init();
     if (typeof CarId !== 'undefined') CarId.init();
-    const pro = [typeof MultiPoint !== 'undefined' && MultiPoint, typeof ImageCheck !== 'undefined' && ImageCheck, typeof CalUI !== 'undefined' && CalUI, typeof XoverCheck !== 'undefined' && XoverCheck, typeof Plans !== 'undefined' && Plans, typeof DspExport !== 'undefined' && DspExport, typeof Listen !== 'undefined' && Listen];
+    const pro = [typeof MultiPoint !== 'undefined' && MultiPoint, typeof ImageCheck !== 'undefined' && ImageCheck, typeof CalUI !== 'undefined' && CalUI, typeof XoverCheck !== 'undefined' && XoverCheck, typeof Plans !== 'undefined' && Plans, typeof DspExport !== 'undefined' && DspExport, typeof Listen !== 'undefined' && Listen, typeof DuoPages !== 'undefined' && DuoPages];
     pro.forEach((m) => { if (m) { try { m.init(); } catch (e) { console.error(e); } } });
     TunePlan.init();
     el('planCsv').onclick = () => Channels.exportPlan('csv');

@@ -1,13 +1,16 @@
 /** 全局角色：本机是「播放端」还是「录音端」，每台设备单独保存，所有双设备页面跟随 */
 const Role = (() => {
   const KEY = 'cat-role-v1', ATTRS = ['data-sprole', 'data-cirole', 'data-mprole', 'data-imrole', 'data-xcrole'];
-  const MIC_PAGES = ['rta', 'phase', 'polarity', 'delay', 'spl', 'analyze'];
+  const MIC_PAGES = ['analyze'];
   let role = null; try { role = localStorage.getItem(KEY); } catch (_) {}
+  const listeners = [];
+  const onChange = (f) => listeners.push(f);
   const $ = (id) => document.getElementById(id);
   const get = () => role || 'player';
   function set(r) {
     role = r; try { localStorage.setItem(KEY, r); } catch (_) {}
     ATTRS.forEach((a) => { const b = document.querySelector(`[${a}="${r}"]`); if (b && !b.classList.contains('on')) b.click(); });
+    listeners.forEach((f) => { try { f(r); } catch (e) { console.error(e); } });
     document.body.classList.toggle('role-player', r === 'player');
     document.body.classList.toggle('role-recorder', r === 'recorder');
     const btn = $('roleBtn'); if (btn) { btn.className = 'role-pill ' + r; btn.innerHTML = r === 'player' ? '🔊 本机：播放端 <small>点此切换</small>' : '🎙 本机：录音端 <small>点此切换</small>'; }
@@ -39,5 +42,5 @@ const Role = (() => {
     }
     if (role) set(role); else { set('player'); role = null; try { localStorage.removeItem(KEY); } catch (_) {} ask(); }
   }
-  return { init, set, get, ask };
+  return { init, set, get, ask, onChange };
 })();

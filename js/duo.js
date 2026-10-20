@@ -127,26 +127,26 @@ const Duo = (() => {
   }
 
   // ---------- 播放端 ----------
-  function player({ btn, cue, count, kind, cues }) {
+  function player({ btn, cue, count, kind, cues, track, loop }) {
     let p = null;
     const stop = () => { if (!p) return; try { p.src.onended = null; p.src.stop(); } catch (_) {} cancelAnimationFrame(p.raf); p = null; btn.textContent = '▶ 开始放'; btn.classList.remove('busy'); };
     btn.onclick = async () => {
       if (p) { stop(); cue.textContent = '已停止'; return; }
-      const t = build(typeof kind === 'function' ? kind() : kind);
+      const t = track ? track() : build(typeof kind === 'function' ? kind() : kind);
       await AudioEngine.resume(true);
       const ctx = AudioEngine.getCtx(), buf = ctx.createBuffer(2, t.L.length, TestTrack.SR);
       buf.copyToChannel(t.L, 0); buf.copyToChannel(t.R, 1);
-      const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+      const src = ctx.createBufferSource(); src.buffer = buf; src.loop = !!loop; src.connect(ctx.destination);
       const t0 = ctx.currentTime + 0.1, dur = buf.duration, cs = (typeof cues === 'function' ? cues() : cues) || [[0, '播放中…']];
       src.start(t0); p = { src, raf: 0 }; btn.textContent = '■ 停止'; btn.classList.add('busy');
-      const tick = () => { if (!p) return; const el = Math.max(0, ctx.currentTime - t0); let c = cs[0][1]; for (const [a, s] of cs) if (el >= a) c = s; cue.textContent = c; if (count) count.textContent = `还剩 ${Math.max(0, Math.ceil(dur - el))} 秒`; p.raf = requestAnimationFrame(tick); };
+      const tick = () => { if (!p) return; const el = Math.max(0, ctx.currentTime - t0); let c = cs[0][1]; for (const [a, s] of cs) if (el >= a) c = s; cue.textContent = c; if (count) count.textContent = loop ? '循环播放中' : `还剩 ${Math.max(0, Math.ceil(dur - el))} 秒`; p.raf = requestAnimationFrame(tick); };
       tick();
       src.onended = () => { stop(); cue.textContent = '放完了 ✓ 看录音端'; if (count) count.textContent = ''; };
     };
     return { stop };
   }
   // ---------- 录音端（只在录音设备上开麦） ----------
-  function recorder({ btn, status, kind, maxSec = 60, onDone }) {
+  function recorder({ btn, status, kind, maxSec = 60, onDone, isDone }) {
     let rec = null;
     const concat = (c, n) => { const y = new Float32Array(n); let o = 0; for (const a of c) { y.set(a, o); o += a.length; } return y; };
     async function stopRec() {
@@ -173,9 +173,11 @@ const Duo = (() => {
       const k = typeof kind === 'function' ? kind() : kind;
       r.timer = setInterval(async () => {
         if (rec !== r) return;
-        const el = (Date.now() - r.t0) / 1000, d = r.n > r.sr * 3 ? detect(concat(r.chunks, r.n), r.sr) : null;
-        status.textContent = d ? `听到测试音了 ✓ 继续录…（${Math.round(el)} 秒）` : `录音中…等待测试音（${Math.round(el)} / ${maxSec} 秒）`;
-        if ((d && d.kind === k && d.complete) || el >= maxSec) finish(await stopRec());
+        const el = (Date.now() - r.t0) / 1000, xx = r.n > r.sr * 3 ? concat(r.chunks, r.n) : null;
+        const d = xx ? (isDone ? isDone(xx, r.sr) : detect(xx, r.sr)) : null;
+        const heard = isDone ? d && d.heard : d, done = isDone ? d && d.done : d && d.kind === k && d.complete;
+        status.textContent = heard ? `听到测试音了 ✓ 继续录…（${Math.round(el)} 秒）` : `录音中…等待测试音（${Math.round(el)} / ${maxSec} 秒）`;
+        if (done || el >= maxSec) finish(await stopRec());
       }, 1000);
     };
     return { stop: stopRec };

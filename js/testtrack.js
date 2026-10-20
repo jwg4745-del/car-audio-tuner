@@ -25,6 +25,8 @@ const TestTrack = (() => {
   const PH_SEG = 8, PH_GAP = 2, PHASE_LEN = 83;
   // 单元极性外录轨：第 4 声咔嗒在 +1.75 s；左 Chirp 2.5 s + 8 个脉冲 3.0–6.5 s；右 Chirp 7.5 s + 脉冲 8.0–11.5 s
   const POLX = { L: { chirp: 2.5, p0: 3.0 }, R: { chirp: 7.5, p0: 8.0 } }, POLX_N = 8, POLX_LEN = 12.5;
+  // 整车识别轨（约 44 秒）：第 4、5 声咔嗒 +1.25 s 与 +1.75 s
+  const CAR = { L: 2.5, R: 9.5, B: 16.5, I: 23.5, seg: 6, chirp0: 30.5, nChirp: 8, sweep: 35, sweepDur: 8, len: 43.5 };
   const OCT = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
   const CHIRP_DUR = 0.15, CHIRP_F0 = 300, CHIRP_F1 = 6000;
 
@@ -116,6 +118,18 @@ const TestTrack = (() => {
         for (let i = 0; i < sig.length; i++) { L[a + i] += sig[i]; R[a + i] += sig[i]; L[b + i] += sig[i]; R[b + i] -= sig[i]; }
       });
       return { file: 'SIMPLE_PHASE_' + (opt || 'lr').toUpperCase() + '.wav', name: '正反相 · ' + pr.name, desc: '', L, R, pair: opt || 'lr' };
+    }
+    if (id === 'car') {
+      const [L, R] = mk(LEAD + CAR.len + 1);
+      const T0 = S(LEAD), click = clickTemplate(SR), ch = chirpTemplate(SR);
+      [...SYNC, SIMPLE_MARK, POL_MARK].forEach((t) => { addAt(L, click, T0 + S(t), 0.9); addAt(R, click, T0 + S(t), 0.9); });
+      const n = S(CAR.seg);
+      const sl = bandPink(n, null, 51), sr2 = bandPink(n, null, 51), sb = bandPink(n, null, 53), si = bandPink(n, null, 54);
+      for (let i = 0; i < n; i++) { L[T0 + S(CAR.L) + i] += sl[i]; R[T0 + S(CAR.R) + i] += sr2[i]; L[T0 + S(CAR.B) + i] += sb[i]; R[T0 + S(CAR.B) + i] += sb[i]; L[T0 + S(CAR.I) + i] += si[i]; R[T0 + S(CAR.I) + i] -= si[i]; }
+      for (let k = 0; k < CAR.nChirp; k++) addAt(k % 2 ? R : L, ch, T0 + S(CAR.chirp0 + k * 0.5), 0.7);
+      const ns = S(CAR.sweepDur), f0 = 20, f1 = 250, ln = Math.log(f1 / f0), a0 = T0 + S(CAR.sweep);
+      for (let i = 0; i < ns; i++) { const t = i / SR; const v = Math.sin(2 * Math.PI * f0 * CAR.sweepDur / ln * (Math.exp(t / CAR.sweepDur * ln) - 1)) * 0.4 * Math.min(1, t / 0.1, (CAR.sweepDur - t) / 0.1); L[a0 + i] += v; R[a0 + i] += v; }
+      return { file: '11_CAR_ID.wav', name: '整车识别轨', desc: '同步咔嗒 + 左/右/双声道/右反相 粉红噪声 + 延时 Chirp + 低音扫频，约 45 秒', L, R };
     }
     if (id === 'polExt') {
       const [L, R] = mk(LEAD + POLX_LEN + 1);
@@ -223,8 +237,8 @@ const TestTrack = (() => {
           const r = xcorrPeak(x, tpl, est, Math.round(0.004 * sr));
           const t0 = est + r.lag;
           const near = (sec) => peaks.some((p) => Math.abs(p.i - peaks[a].i - sec * sr) <= tol);
-          const type = near(PHASE_MARK) ? 'phase' : near(POL_MARK) ? 'polExt' : near(SIMPLE_MARK) ? 'simple' : 'auto';
-          const len = type === 'simple' ? SIMPLE_LEN - 0.5 : type === 'phase' ? PHASE_LEN - 1.5 : type === 'polExt' ? POLX_LEN - 0.5 : AUTO_LEN - 1.2;
+          const type = near(SIMPLE_MARK) && near(POL_MARK) ? 'car' : near(PHASE_MARK) ? 'phase' : near(POL_MARK) ? 'polExt' : near(SIMPLE_MARK) ? 'simple' : 'auto';
+          const len = type === 'car' ? CAR.len - 0.3 : type === 'simple' ? SIMPLE_LEN - 0.5 : type === 'phase' ? PHASE_LEN - 1.5 : type === 'polExt' ? POLX_LEN - 0.5 : AUTO_LEN - 1.2;
           return { t0, type, complete: t0 + Math.round(len * sr) <= x.length, snr: peaks[a].v / floor };
         }
       }
@@ -407,6 +421,6 @@ const TestTrack = (() => {
     });
   }
 
-  return { SR, SEG, CHIRPS, PULSES, PHASE_PAIRS, TRACK_IDS, buildTrack, wavBytes, zipBytes, crc32, detect, analyzeTrack, analyzePhase, analyzePolExt, analyzeSimple, SIMPLE_PAIRS, play, stopPlay, init };
+  return { SR, CAR, chirpTemplate, biquad, xcorrPeak, SEG, CHIRPS, PULSES, PHASE_PAIRS, TRACK_IDS, buildTrack, wavBytes, zipBytes, crc32, detect, analyzeTrack, analyzePhase, analyzePolExt, analyzeSimple, SIMPLE_PAIRS, play, stopPlay, init };
 })();
 if (typeof module !== 'undefined') module.exports = TestTrack;

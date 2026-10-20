@@ -292,6 +292,7 @@ const App = (() => {
     Analyzer.init();
     if (typeof TestTrack !== 'undefined') TestTrack.init();
     if (typeof Simple !== 'undefined') Simple.init();
+    if (typeof CarId !== 'undefined') CarId.init();
     TunePlan.init();
     el('planCsv').onclick = () => Channels.exportPlan('csv');
     el('planJson').onclick = () => Channels.exportPlan('json');

@@ -37,7 +37,7 @@ const CarId = (() => {
       const fc = 1000 * Math.pow(2, i / 3); if (fc < fmin || fc > fmax || fc > sr / 2.2) continue;
       const lo = fc / Math.pow(2, 1 / 6), hi = fc * Math.pow(2, 1 / 6); let s = 0;
       for (let k = Math.max(1, Math.floor(lo * N / sr)); k < N / 2 && k * sr / N < hi; k++) if (k * sr / N >= lo) s += acc[k];
-      out.push({ fc: Math.round(fc), level: 10 * Math.log10(s / Math.max(1, fr) / ws + 1e-20) });
+      out.push({ fc: Math.round(fc), level: 10 * Math.log10(s / Math.max(1, fr) / ws + 1e-20) + (typeof Cal !== 'undefined' ? Cal.corr(fc) : 0) });
     }
     return out;
   }
@@ -220,7 +220,7 @@ const CarId = (() => {
     $('ciSummary').innerHTML = `<table class="ci-tab">${lines(r).map(([k, v]) => `<tr><th>${k}</th><td>${esc(v)}</td></tr>`).join('')}</table>`
       + (r.issues.length ? `<div class="ci-iss"><b>主要问题</b><ol>${r.issues.map((i) => `<li>${esc(i)}</li>`).join('')}</ol></div>` : '<p class="sp-reason">没发现明显问题 ✓</p>')
       + (r.warn.length ? `<p class="ci-warn">${r.warn.map((w) => '⚠️ ' + esc(w)).join('<br>')}</p>` : '')
-      + '<p class="sp-hint">基于手机麦克风（未校准）测量，仅供参考</p>';
+      + '<p class="sp-hint">' + (typeof Cal !== 'undefined' ? esc(Cal.note()) : '基于手机麦克风（未校准）测量，仅供参考') + '</p>';
     $('ciWrite').hidden = false;
     $('ciDetail').textContent = JSON.stringify({ levels: r.levels, snrDb: r.snrDb, delay: r.delay, phase: r.phase, bass: r.bass, treble: r.treble, flatnessDb: r.flatnessDb, bands: r.bands.map((b) => `${b.fc}Hz ${b.level} (目标 ${b.target}, 偏差 ${b.dev})${b.valid ? '' : ' 噪声内'}`) }, null, 1);
   }

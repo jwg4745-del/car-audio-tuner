@@ -80,10 +80,31 @@ const TunePlan = (() => {
     // 2. 极性
     {
       const items = [], todo = [];
-      const tested = chs.filter((c) => c.polarity && c.polarity !== '未测');
+      // 外录单元极性（10_POLARITY_EXT，DSP 只开该单元录制）
+      const extPol = {};
+      chs.forEach((c) => {
+        const r = A['pol-' + c.id]; const tk = r && r.track; if (!tk || tk.type !== 'polExt') return;
+        const s = c.side === 'R' ? tk.R : c.side === 'L' ? tk.L : (tk.L.present ? tk.L : tk.R);
+        if (s && s.present && s.polarity !== '不确定') extPol[c.id] = s.polarity;
+      });
+      const tested = chs.filter((c) => (c.polarity && c.polarity !== '未测') || extPol[c.id]);
+      chs.filter((c) => !/反/.test(c.polarity || '') && extPol[c.id] === '反').forEach((c) => { per[c.id].invert = true; items.push({ ch: nm(c), value: '反相 (Invert)', reason: '外录极性脉冲多数为负（单元极性外录轨），该单元可能接反' }); });
+      // 外录相位测试（09_PHASE_TEST）：同相 vs 右反相 对比
+      const ph = A.phase && A.phase.track;
+      if (ph && ph.type === 'phase') {
+        ph.pairs.forEach((p) => {
+          if (p.verdict === '相位相反') {
+            const tgt = p.id === 'x3k5' ? chs.filter((c) => c.side === 'R' && (c.type === 'tweeter' || c.type === 'mid')) : p.id === 'x80' ? chs.filter((c) => c.side === 'R' && c.type !== 'tweeter') : chs.filter((c) => c.side === 'R');
+            items.push({ ch: `右侧 ${tgt.map((c) => 'CH' + c.id).join('/') || '通道'}`, value: '试整体反相', reason: `相位测试「${p.name}」：右反相段反而比同相段响 ${Math.abs(p.diffDb)} dB，说明左右在该频段相位相反；反相右侧（或左侧）后复录，同相段应更响` });
+          } else if (p.verdict === '同相（正常）') items.push({ ch: `左右 · ${p.name}`, value: '保持', reason: `同相段比反相段响 ${p.diffDb} dB，相位正常` });
+        });
+      } else todo.push('没有 AUX/USB 线时：在「外录模式」用 U 盘或第二部手机播放 09_PHASE_TEST，录 90 秒自动判断左右相位。');
       chs.filter((c) => /反/.test(c.polarity || '')).forEach((c) => { per[c.id].invert = true; items.push({ ch: nm(c), value: '反相 (Invert)', reason: '极性检测首波为负，接线可能接反；可在 DSP 反相或改正负极接线' }); });
       const st = sys && sys.stereo;
-      if (st && st.peakCorrelation < -0.3) items.push({ ch: '左右声道', value: '检查', reason: `整车录音左右相关度为负（${st.peakCorrelation}），疑似一侧整体反相` });
+      if (sys && sys.track && sys.track.polarity && sys.track.polarity.mismatch) {
+        const bad = sys.track.polarity.L === '反' ? 'L' : 'R';
+        items.push({ ch: `${bad === 'L' ? '左' : '右'}侧通道（${chs.filter((c) => c.side === bad).map((c) => 'CH' + c.id).join('/')}）`, value: '试整体反相', reason: '测试轨极性脉冲显示该侧与另一侧相反（外录估计，反相后复录确认）' });
+      } else if (st && st.peakCorrelation < -0.3) items.push({ ch: '左右声道', value: '检查', reason: `整车录音左右相关度为负（${st.peakCorrelation}），疑似一侧整体反相` });
       if (tested.length < chs.length) todo.push(`未做极性检测的通道：${chs.filter((c) => !tested.includes(c)).map(nm).join('、')}（先做「极性检测」）`);
       steps.push({ title: '极性', items, todo, _pending: true });
     }
@@ -155,7 +176,7 @@ const TunePlan = (() => {
         if (st && Math.abs(st.delayMs) > 0.1 && Math.abs(st.peakCorrelation) > 0.3) {
           const early = st.delayMs > 0 ? 'L' : 'R', d = r2(Math.abs(st.delayMs));
           chs.filter((c) => c.side === early).forEach((c) => { per[c.id].delayMs = d; per[c.id].delaySrc = '录音估算'; });
-          items.push({ ch: `所有${early === 'L' ? '左' : '右'}侧通道`, value: `${d} ms`, reason: `整车录音显示${early === 'L' ? '左' : '右'}侧声音先到 ${d} ms，给它补延时（粗调）` });
+          items.push({ ch: `所有${early === 'L' ? '左' : '右'}侧通道`, value: `${d} ms`, reason: `${sys.track ? '测试轨 Chirp 测得' : '整车录音显示'}${early === 'L' ? '左' : '右'}侧声音先到 ${d} ms，给它补延时${sys.track ? '' : '（粗调）'}` });
         } else items.push({ ch: '全部通道', value: '0 ms（默认值）', reason: '暂无距离/延时数据' });
       }
       steps.push({ title: '延时（以最远通道为 0）', items, todo });
@@ -238,8 +259,9 @@ const TunePlan = (() => {
   function loadAn() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (_) { return {}; } }
   function saveAnalysis(report) {
     const a = loadAn();
-    const key = report.channelId || 'all';
-    a[key] = { channel: report.channel, file: report.file, targetCurve: report.targetCurve, bands: report.bands, balance: report.balance, stereo: report.stereo, levels: report.levels, at: report.createdAt };
+    const tt = report.track && report.track.type;
+    const key = tt === 'phase' ? 'phase' : tt === 'polExt' ? 'pol-' + (report.channelId || 'all') : report.channelId || 'all';
+    a[key] = { track: report.track ? (report.track.type === 'phase' || report.track.type === 'polExt' ? report.track : { type: 'auto', polarity: report.track.polarity, snrDb: report.track.snrDb, delayMs: report.track.delayMs, lrDiffDb: report.track.lrDiffDb }) : null, channelId: report.channelId || null, channel: report.channel, file: report.file, targetCurve: report.targetCurve, bands: report.bands, balance: report.balance, stereo: report.stereo, levels: report.levels, at: report.createdAt };
     try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (_) {}
   }
   function clearAnalyses() { try { localStorage.removeItem(KEY); } catch (_) {} }

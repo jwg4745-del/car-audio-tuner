@@ -42,15 +42,23 @@ const Analyzer = (() => {
     if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
     if (!window.MediaRecorder) { alert('此浏览器不支持录音（MediaRecorder），请改用上传文件。'); return; }
     let stream;
+    AudioEngine.stopAll();
+    AudioEngine.releaseMic({ noReset: true });
+    AudioEngine.setExternalMic(true);
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-    } catch (e) { alert('无法使用麦克风：' + e.message + '\n需要 HTTPS 并允许麦克风权限。'); return; }
-    const secs = Math.max(2, Math.min(60, +el('anRecSec').value || 10));
+    } catch (e) { AudioEngine.setExternalMic(false); alert('无法使用麦克风：' + e.message + '\n需要 HTTPS 并允许麦克风权限。'); return; }
+    const secs = Math.max(2, Math.min(120, +el('anRecSec').value || 10));
     const chunks = [];
     recorder = new MediaRecorder(stream);
     recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-    recorder.onstop = () => {
+    if (typeof App !== 'undefined') App.setMicUI(true);
+    recorder.onstop = async () => {
       stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+      AudioEngine.setExternalMic(false);
+      if (typeof App !== 'undefined') App.setMicUI(false);
+      await AudioEngine.resetOutput('mic');
       el('anRec').textContent = '🎙 录制并分析';
       const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
       analyzeFile(blob, '麦克风录音 ' + secs + 's');
@@ -220,12 +228,21 @@ const Analyzer = (() => {
       wave[2 * p] = mn; wave[2 * p + 1] = mx;
     }
     progress(18, '频谱分析…');
-    const { spec, freqs } = await welch(mono, sr);
+    // 外录：识别测试轨同步咔嗒 → 按时间表分析
+    let track = null;
+    if (typeof TestTrack !== 'undefined') {
+      progress(15, '识别测试轨…'); await tick();
+      try { const det = TestTrack.detect(mono, sr); if (det && det.complete) { progress(30, det.type === 'phase' ? '分析相位测试轨…' : '分析测试轨…'); await tick(); track = det.type === 'phase' ? TestTrack.analyzePhase(mono, sr, det) : det.type === 'polExt' ? TestTrack.analyzePolExt(mono, sr, det) : { type: 'auto', ...TestTrack.analyzeTrack(mono, sr, det) }; } else if (det) track = { incomplete: true, type: det.type, t0Sec: det.t0 / sr }; } catch (e) { console.warn(e); }
+    }
+    const specSrc = track && track.segments ? mono.subarray(track.segments.B[0], track.segments.B[1]) : mono;
+    const { spec, freqs } = await welch(specSrc, sr);
     let st = null;
-    if (chans.length === 2) { progress(80, '立体声分析…'); await tick(); st = stereo(chans[0], chans[1], sr); }
+    if (track && track.segments) {
+      st = { source: 'track', lrDiffDb: track.lrDiffDb, correlation: track.polarity.mismatch ? -1 : 1, peakCorrelation: track.polarity.mismatch ? -0.8 : 0.9, delayMs: track.delayMs, delayCm: track.delayCm };
+    } else if (chans.length === 2) { progress(80, '立体声分析…'); await tick(); st = stereo(chans[0], chans[1], sr); }
     cache = {
       label, sr, nCh, duration: audio.duration, analyzedSec: n / sr, truncated,
-      stats, all, wave, spec, freqs, stereo: st,
+      stats, all, wave, spec, freqs, stereo: st, track,
     };
     runFromCache();
     progress(100, '分析完成');
@@ -306,12 +323,19 @@ const Analyzer = (() => {
     if (sib > 3) tips.push(`5–9 kHz 偏高 ${sib.toFixed(1)} dB，齿音可能明显。`);
     if (rolloff) tips.push(`低频约在 ${fmtF(rolloff)} 以下明显衰减（-6 dB 点估算）。`);
     if (c.stereo) {
-      const d = c.stats[0].rmsDb - c.stats[1].rmsDb;
+      const d = c.stereo.source === 'track' ? c.stereo.lrDiffDb : c.stats[0].rmsDb - c.stats[1].rmsDb;
       c.stereo.lrDiffDb = d;
       if (Math.abs(d) > 1.5) tips.push(`左右电平相差 ${Math.abs(d).toFixed(1)} dB（${d > 0 ? '左' : '右'}声道偏大），可在 DSP 中平衡增益。`);
-      if (c.stereo.peakCorrelation < -0.3) tips.push('左右声道呈负相关，可能存在极性接反，请用「极性检测」确认。');
+      if (c.stereo.source === 'track') {
+        const p = c.track.polarity;
+        if (p.mismatch) tips.push(`测试轨极性脉冲：左侧${p.L}、右侧${p.R}，左右极性不一致，「${p.L === '反' ? '左' : '右'}」侧可能接反（含该侧所有单元），建议在 DSP 反相或检查接线后复测。`);
+        if (c.track.snrDb < 15) tips.push(`录音信噪比较低（${c.track.snrDb} dB），请关空调/发动机噪声或调高车机音量后重录。`);
+      } else if (c.stereo.peakCorrelation < -0.3) tips.push('左右声道呈负相关，可能存在极性接反，请用「极性检测」确认。');
       if (Math.abs(c.stereo.delayMs) > 0.1 && Math.abs(c.stereo.peakCorrelation) > 0.3) tips.push(`估计左右时间差 ${c.stereo.delayMs.toFixed(2)} ms（约 ${Math.abs(c.stereo.delayCm).toFixed(1)} cm），${c.stereo.delayMs > 0 ? '右' : '左'}声道较晚。`);
     }
+    if (c.track && c.track.incomplete) tips.push(c.track.type === 'phase' ? '识别到相位测试轨，但没录完整（需约 85 秒）。请录 90 秒。' : c.track.type === 'polExt' ? '识别到单元极性轨，但没录完整（需约 14 秒）。请录 20 秒。' : '识别到测试轨开头，但录音太短，没录完整（需约 34 秒）。请录 45 秒并从 01_AUTO_TEST 开头播放。');
+    if (c.track && c.track.type === 'phase') c.track.pairs.forEach((p) => { if (p.verdict === '相位相反') tips.push(`相位测试「${p.name}」：右反相段比同相段还响 ${Math.abs(p.diffDb)} dB → 左右相位相反，建议在 DSP 把一侧（例如右侧相关单元）反相，复录确认同相段更响。`); else if (p.verdict === '差异不明显') tips.push(`相位测试「${p.name}」：同相/反相差异不明显（${p.diffDb} dB），可能存在约 90° 的相位差或时间差，建议先调好延时再复测。`); });
+    if (c.track && c.track.type === 'polExt') ['L', 'R'].forEach((s) => { const v = c.track[s]; if (v.present && v.polarity === '反') tips.push(`${s === 'L' ? '左' : '右'}侧当前单元的极性脉冲多数为负（${v.neg}/8）→ 可能接反，建议反相。`); });
     if (!tips.length) tips.push('整体较均衡，未发现明显问题。');
     tips.push('以上结果基于未校准麦克风与录音设备，仅供调音参考。');
 
@@ -324,7 +348,8 @@ const Analyzer = (() => {
       levels: { peakDb: +c.all.peakDb.toFixed(1), rmsDb: +c.all.rmsDb.toFixed(1), crestDb: +c.all.crestDb.toFixed(1), clipSamples: c.all.clipSamples, perChannel: c.stats.map((s) => ({ peakDb: +s.peakDb.toFixed(1), rmsDb: +s.rmsDb.toFixed(1), clipSamples: s.clipSamples })) },
       bands: bands.map((b) => ({ fc: Math.round(b.fc), level: +b.rel.toFixed(1), target: +b.target.toFixed(1), dev: +b.dev.toFixed(1) })),
       balance: { bass: +balance.bass.toFixed(1), mid: +balance.mid.toFixed(1), treble: +balance.treble.toFixed(1), harsh2to5k: +harsh.toFixed(1), sibilance5to9k: +sib.toFixed(1), lowRolloffHz: rolloff ? Math.round(rolloff) : null },
-      stereo: c.stereo ? { lrDiffDb: +c.stereo.lrDiffDb.toFixed(2), correlation: +c.stereo.correlation.toFixed(3), peakCorrelation: +c.stereo.peakCorrelation.toFixed(3), delayMs: +c.stereo.delayMs.toFixed(3), delayCm: +c.stereo.delayCm.toFixed(1) } : null,
+      track: c.track || null,
+      stereo: c.stereo ? { source: c.stereo.source || 'stereo-file', lrDiffDb: +c.stereo.lrDiffDb.toFixed(2), correlation: +c.stereo.correlation.toFixed(3), peakCorrelation: +c.stereo.peakCorrelation.toFixed(3), delayMs: +c.stereo.delayMs.toFixed(3), delayCm: +c.stereo.delayCm.toFixed(1) } : null,
       problems, eq, tips,
     };
     cache.bands = bands;
@@ -349,11 +374,25 @@ const Analyzer = (() => {
       .map(([k, v]) => `<div class="readout"><span class="label">${k}</span><span class="value small ${Math.abs(v) > 3 ? 'warnc' : ''}">${v > 0 ? '+' : ''}${v} dB</span></div>`).join('')
       + `<div class="readout"><span class="label">低频 -6dB 点</span><span class="value small">${b.lowRolloffHz ? b.lowRolloffHz + ' Hz' : '—'}</span></div>`;
     const s = r.stereo;
-    el('anStereo').innerHTML = s
+    const tk = r.track && r.track.segments ? r.track : null;
+    const ph = r.track && r.track.type === 'phase' && r.track.pairs ? r.track : null;
+    const px = r.track && r.track.type === 'polExt' && r.track.L ? r.track : null;
+    el('anStereo').innerHTML = ph
+      ? `<p class="hint okc">✓ 已识别相位测试轨（第 ${ph.t0Sec.toFixed(2)} 秒开始）· 同相段应比右反相段更响</p>`
+        + ph.pairs.map((p) => `<div class="readout"><span class="label">${p.name}<br><small>同相 ${p.inDb} / 反相 ${p.invDb} dBFS · ${p.octaves.filter((o) => o.valid).map((o) => (o.f >= 1000 ? o.f / 1000 + 'k' : o.f) + ':' + (o.diffDb > 0 ? '+' : '') + o.diffDb).join(' ')}</small></span><span class="value small ${p.verdict === '相位相反' ? 'badc' : p.verdict.startsWith('同相') ? 'okc' : 'warnc'}">${p.verdict} (${p.diffDb > 0 ? '+' : ''}${p.diffDb} dB)</span></div>`).join('')
+      : px
+      ? `<p class="hint okc">✓ 已识别单元极性外录轨（第 ${px.t0Sec.toFixed(2)} 秒开始）</p>`
+        + ['L', 'R'].map((s) => `<div class="readout"><span class="label">${s === 'L' ? '左' : '右'}声道单元</span><span class="value small ${px[s].polarity === '反' ? 'badc' : px[s].polarity === '正' ? 'okc' : ''}">${px[s].polarity}${px[s].present ? `（正 ${px[s].pos} / 负 ${px[s].neg}）` : ''}</span></div>`).join('')
+      : tk
+      ? `<p class="hint okc">✓ 已识别测试轨（第 ${tk.t0Sec.toFixed(2)} 秒开始）· 按音轨时间表分析 · 信噪比 ${tk.snrDb} dB</p>
+         <div class="readout"><span class="label">左右电平差（左−右）</span><span class="value small">${tk.lrDiffDb} dB</span></div>
+         <div class="readout"><span class="label">L/R 到达时间差</span><span class="value small">${tk.delayMs} ms / ${tk.delayCm} cm${tk.delayMs > 0 ? '（右晚）' : tk.delayMs < 0 ? '（左晚）' : ''}</span></div>
+         <div class="readout"><span class="label">极性 左 / 右</span><span class="value small ${tk.polarity.mismatch ? 'badc' : 'okc'}">${tk.polarity.L} / ${tk.polarity.R}</span></div>`
+      : s
       ? `<div class="readout"><span class="label">左右电平差</span><span class="value small">${s.lrDiffDb} dB</span></div>
          <div class="readout"><span class="label">相关度</span><span class="value small ${s.correlation < 0 ? 'badc' : 'okc'}">${s.correlation}</span></div>
          <div class="readout"><span class="label">L/R 时间差</span><span class="value small">${s.delayMs} ms / ${s.delayCm} cm</span></div>`
-      : '<p class="hint">单声道录音，无立体声分析。</p>';
+      : '<p class="hint">单声道录音，无立体声分析。播放「外录模式」的 01_AUTO_TEST 测试轨再录音，可自动测出左右电平差、时间差和极性。</p>';
     el('anProblems').innerHTML = r.problems.length ? r.problems.map((p) => `<li><span class="tag tag-${p.type === '谷' ? 'dip' : 'peak'}">${p.type}</span>${p.text}</li>`).join('') : '<li>未发现超过 ±4 dB 的偏差。</li>';
     el('anEq').innerHTML = r.eq.length ? r.eq.map((e, i) => `<tr><td>${i + 1}</td><td>${e.freq} Hz</td><td>${e.gain > 0 ? '+' : ''}${e.gain} dB</td><td>${e.q}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">无需 EQ 调整</td></tr>';
     el('anTips').innerHTML = r.tips.map((t) => `<li>${t}</li>`).join('');

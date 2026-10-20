@@ -11,9 +11,53 @@ const AudioEngine = (() => {
   let activeNodes = [];
   let masterLevel = 0.12;
 
+  const stateListeners = [];
+  let sinkId = '';
+  let resetTimer = null;
+  let externalMic = false;
+  function setExternalMic(v) { externalMic = !!v; setSession(v ? 'play-and-record' : 'playback'); emitState(); }
+  let keepAlive = null;
+
+  /** iOS 16.4+：仅播放时用 playback（不受静音键影响，蓝牙走 A2DP）；开麦时才 play-and-record */
+  function setSession(type) {
+    try { if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type; } catch (_) {}
+  }
+
+  /** 生成极短静音 WAV（data URI），用 <audio> 循环播放，让 iOS 把页面当作媒体播放 */
+  function silentWavUri() {
+    const sr = 8000, n = 4000, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    s(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); s(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, 'data'); v.setUint32(40, n * 2, true);
+    let bin = ''; const u8 = new Uint8Array(buf); for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+    return 'data:audio/wav;base64,' + btoa(bin);
+  }
+  function startKeepAlive() {
+    try {
+      if (!keepAlive) {
+        keepAlive = document.createElement('audio');
+        keepAlive.src = silentWavUri();
+        keepAlive.loop = true;
+        keepAlive.preload = 'auto';
+        keepAlive.setAttribute('playsinline', '');
+        keepAlive.setAttribute('x-webkit-airplay', 'deny');
+        keepAlive.volume = 0.01;
+      }
+      if (keepAlive.paused) { const p = keepAlive.play(); if (p && p.catch) p.catch(() => {}); }
+    } catch (_) {}
+  }
+  function stopKeepAlive() { try { if (keepAlive) keepAlive.pause(); } catch (_) {} }
+
+  function emitState() { stateListeners.forEach((f) => { try { f(ctx ? ctx.state : 'none'); } catch (_) {} }); }
+  function onState(f) { stateListeners.push(f); }
+
   function ensure() {
+    if (ctx && ctx.state === 'closed') { ctx = null; }
     if (!ctx) {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!micStream && !externalMic) setSession('playback');
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
+      ctx.addEventListener('statechange', emitState);
+      if (sinkId && ctx.setSinkId) ctx.setSinkId(sinkId).catch(() => {});
       masterGain = ctx.createGain();
       masterGain.gain.value = masterLevel;
       masterGain.connect(ctx.destination);
@@ -25,8 +69,33 @@ const AudioEngine = (() => {
       tap.gain.value = 1;
       // We'll connect generators: node -> genAnalyser -> masterGain
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state !== 'running') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); }
     return ctx;
+  }
+
+  /** 恢复音频：resume；失败或超时则关闭并重建 AudioContext */
+  async function resume(force) {
+    startKeepAlive();
+    if (!micStream) setSession('playback');
+    ensure();
+    const ok = await Promise.race([ctx.resume().then(() => ctx.state === 'running', () => false), new Promise((r) => setTimeout(() => r(false), 1500))]);
+    if (ok && !force) { emitState(); return 'running'; }
+    if (!ok || force) {
+      try { stopAll(); } catch (_) {}
+      const old = ctx;
+      releaseMic();
+      ctx = null; masterGain = null; genAnalyser = null;
+      try { if (old) old.close(); } catch (_) {}
+      ensure();
+      try { await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 1500))]); } catch (_) {}
+    }
+    emitState();
+    return ctx.state;
+  }
+
+  function info() {
+    if (!ctx) return { state: 'none' };
+    return { state: ctx.state, sampleRate: ctx.sampleRate, outputLatency: ctx.outputLatency, baseLatency: ctx.baseLatency, master: Math.round(masterLevel * 100), mic: !!micStream || externalMic, sinkId };
   }
 
   function setMasterLevel(pct) {
@@ -91,6 +160,7 @@ const AudioEngine = (() => {
     ensure();
     if (micStream) return { ok: true, analyser: micAnalyser };
     try {
+      setSession('play-and-record');
       micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: false,
@@ -103,10 +173,55 @@ const AudioEngine = (() => {
       micAnalyser.fftSize = 4096;
       micAnalyser.smoothingTimeConstant = 0.5;
       micSource.connect(micAnalyser);
+      if (typeof App !== 'undefined' && App.setMicUI) App.setMicUI(true);
       return { ok: true, analyser: micAnalyser };
     } catch (e) {
+      setSession('playback');
       return { ok: false, error: e.message || String(e) };
     }
+  }
+
+  /** 测完立刻关麦：开着麦会让蓝牙切到通话(HFP)模式，A2DP 媒体声音会消失或变差 */
+  function releaseMic(opts = {}) {
+    const wasOpen = !!micStream;
+    if (micStream) { try { micStream.getTracks().forEach((t) => t.stop()); } catch (_) {} }
+    try { if (micSource) micSource.disconnect(); } catch (_) {}
+    micStream = null; micSource = null; micAnalyser = null;
+    setSession('playback');
+    if (typeof App !== 'undefined' && App.setMicUI) App.setMicUI(false);
+    // iOS 关麦后常保持「扬声器」路由，必须新建 AudioContext 才回到蓝牙 / 车机
+    if (wasOpen && !opts.noReset) { clearTimeout(resetTimer); resetTimer = setTimeout(() => resetOutput('mic'), 250); }
+  }
+
+  /** 重置音频输出：停止播放、关麦、关闭并重建 AudioContext，会话恢复为 playback */
+  async function resetOutput(reason) {
+    clearTimeout(resetTimer);
+    releaseMic({ noReset: true });
+    try { if (typeof App !== 'undefined' && App.stopAll) App.stopAll(true); } catch (_) {}
+    try { stopAll(); } catch (_) {}
+    clearTimeout(resetTimer);
+    const old = ctx;
+    ctx = null; masterGain = null; genAnalyser = null;
+    try { if (old && old.state !== 'closed') await old.close(); } catch (_) {}
+    setSession('playback');
+    startKeepAlive();
+    ensure();
+    try { await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 1500))]); } catch (_) {}
+    emitState();
+    if (typeof App !== 'undefined' && App.onOutputReset) App.onOutputReset(reason);
+    return ctx.state;
+  }
+
+  function canPickOutput() { return !!(window.AudioContext && AudioContext.prototype.setSinkId); }
+  async function listOutputs() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return [];
+    const ds = await navigator.mediaDevices.enumerateDevices();
+    return ds.filter((d) => d.kind === 'audiooutput');
+  }
+  async function setOutput(id) {
+    sinkId = id || '';
+    ensure();
+    if (ctx.setSinkId) await ctx.setSinkId(sinkId);
   }
 
   function getMicAnalyser() { return micAnalyser; }
@@ -354,7 +469,7 @@ const AudioEngine = (() => {
 
   return {
     ensure, setMasterLevel, getMasterLevel, stopAll,
-    enableMic, getMicAnalyser, getGenAnalyser, hasMic, getAnalysisAnalyser,
+    enableMic, releaseMic, resetOutput, setExternalMic, canPickOutput, listOutputs, setOutput, resume, info, onState, startKeepAlive, stopKeepAlive, setSession, getMicAnalyser, getGenAnalyser, hasMic, getAnalysisAnalyser,
     createOsc, createGain, createNoise, createSweepBuffer,
     createImpulseBuffer, createChirpBuffer, createBurst,
     connectOut, connectStereoPair, chainConnect, makeCrossover, biquad,

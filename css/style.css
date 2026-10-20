@@ -655,3 +655,8 @@ body.role-player .role-note .rn-player{display:block;background:rgba(47,211,165,
 body.role-recorder .role-note .rn-recorder{display:block;background:rgba(255,77,94,.15);border:1px solid #ff4d5e}
 body.role-player #panel-cal>:not(.role-note):not(h2){display:none !important}
 body.role-player #btnMic{display:none}
+
+.duo-ui{margin-top:8px}
+.duo-adv{margin-top:8px;opacity:.85}
+.duo-adv-toggle{margin-top:16px}
+.rta-duo{margin-bottom:10px}

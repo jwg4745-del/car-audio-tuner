@@ -93,6 +93,19 @@ const AudioEngine = (() => {
     return ctx.state;
   }
 
+  /** 在点击手势内同步调用：创建/恢复 ctx 并放 1 帧静音，解锁 iOS 音频 */
+  function unlockSync() {
+    try {
+      startKeepAlive();
+      if (!micStream) setSession('playback');
+      ensure();
+      const p = ctx.resume(); if (p && p.catch) p.catch(() => {});
+      const b = ctx.createBuffer(1, 1, ctx.sampleRate), s = ctx.createBufferSource();
+      s.buffer = b; s.connect(ctx.destination); s.start(0);
+    } catch (e) { console.warn('unlockSync', e); }
+    return ctx;
+  }
+
   function info() {
     if (!ctx) return { state: 'none' };
     return { state: ctx.state, sampleRate: ctx.sampleRate, outputLatency: ctx.outputLatency, baseLatency: ctx.baseLatency, master: Math.round(masterLevel * 100), mic: !!micStream || externalMic, sinkId };
@@ -476,6 +489,6 @@ const AudioEngine = (() => {
     createImpulseBuffer, createChirpBuffer, createBurst,
     connectOut, connectStereoPair, chainConnect, makeCrossover, biquad,
     captureTimeData, crossCorrelate, estimatePhase,
-    sampleRate, now, getCtx, track,
+    sampleRate, now, getCtx, unlockSync, track,
   };
 })();

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const TP = require('/workspace/car-audio-tuner/js/tuneplan.js');
+const TP = require('../js/tuneplan.js');
 const DEF = [['前左高音','L','tweeter',3500,null],['前左中音','L','mid',300,3500],['前左低音','L','woofer',40,300],['前右高音','R','tweeter',3500,null],['前右中音','R','mid',300,3500],['前右低音','R','woofer',40,300],['中置','C','center',250,null],['后左','L','rear',80,null],['后右','R','rear',80,null],['超低音左','L','sub',20,80],['超低音右','R','sub',20,80],['备用/环绕','M','full',null,null]];
 const chans = (patch = {}) => DEF.map(([name, side, type, hpf, lpf], i) => Object.assign({ id: i + 1, name, side, type, mute: false, hpf, lpf, slope: 24, polarity: '未测', levelDb: null, delayMs: null, distCm: null }, patch[i + 1] || {}));
 const FC = []; for (let i = -17; i <= 13; i++) { const f = 1000 * 2 ** (i / 3); if (f >= 20 && f <= 20000) FC.push(f); }

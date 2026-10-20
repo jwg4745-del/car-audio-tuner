@@ -516,7 +516,7 @@
           <p class="hint">汇总每个通道的延时补偿、增益修正、极性、分频，照抄到 DSP 即可。距离可直接填写（扬声器到主驾头部，cm），会覆盖实测延时；延时以最远通道为 0。增益修正以最安静通道为基准（只衰减不提升）。</p>
           <div class="table-scroll">
             <table class="data-table plan-table">
-              <thead><tr><th>通道</th><th>距离 cm</th><th>实测 ms</th><th>延时补偿</th><th>增益修正</th><th>极性</th><th>分频</th></tr></thead>
+              <thead><tr><th>通道</th><th>距离 cm</th><th>实测 ms</th><th>延时补偿</th><th>增益修正</th><th>极性</th><th>分频</th><th>EQ</th></tr></thead>
               <tbody id="planBody"></tbody>
             </table>
           </div>
@@ -524,6 +524,22 @@
             <button type="button" class="btn btn-primary" id="planCsv">导出 CSV</button>
             <button type="button" class="btn btn-accent" id="planJson">导出 JSON</button>
             <button type="button" class="btn btn-ghost" id="planClear">清空测量值</button>
+          </div>
+        </div>
+        <div class="card tp-card" style="margin-top:1rem">
+          <h2>🛠 生成调音方案</h2>
+          <p class="hint">汇总已做的录音分析（按通道）、延时、电平、极性、分频，按调音顺序给出具体步骤和数值。缺数据的步骤会提示先测什么，并给出标明「默认值」的起始设置。基于未校准麦克风，仅供参考。</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary btn-touch" id="tpGen">生成调音方案</button>
+            <button type="button" class="btn btn-ghost" id="tpClearAn">清除录音分析数据</button>
+          </div>
+          <div id="tpOut" hidden></div>
+          <div class="btn-row" id="tpActions" hidden>
+            <button type="button" class="btn btn-primary" id="tpApply">应用到通道方案</button>
+            <button type="button" class="btn btn-accent" id="tpCopy">复制方案</button>
+            <button type="button" class="btn btn-ghost" id="tpTxt">导出 TXT</button>
+            <button type="button" class="btn btn-ghost" id="tpCsv">导出 CSV</button>
+            <button type="button" class="btn btn-ghost" id="tpJson">导出 JSON</button>
           </div>
           <div class="tip-box"><strong>说明：</strong>浏览器只能输出立体声（左/右）。测某个通道时，请在主机 / DSP 里只打开该物理通道（或静音其他通道），本工具按通道的「声道侧」把信号送到左或右，并记录每个通道的结果。</div>
         </div>
@@ -579,6 +595,12 @@
           <div class="panel-grid an-grid">
             <div class="card"><h3>建议参数 EQ（±6 dB 上限）</h3>
               <table class="data-table"><thead><tr><th>#</th><th>频率</th><th>增益</th><th>Q</th></tr></thead><tbody id="anEq"></tbody></table></div>
+            <div class="card tp-card an-plan"><h3>🛠 自动调音方案（按步骤执行）</h3>
+              <div id="anPlanOut" hidden></div>
+              <div class="btn-row" id="anPlanActions" hidden>
+                <button type="button" class="btn btn-primary" id="anTpApply">应用到通道方案</button>
+                <button type="button" class="btn btn-ghost" id="anTpCopy">复制方案</button>
+              </div></div>
             <div class="card"><h3>调音建议（仅供参考）</h3><ul class="help-list an-list" id="anTips"></ul>
               <div class="btn-row">
                 <button type="button" class="btn btn-primary" id="anExportJson">导出 JSON</button>
@@ -597,6 +619,7 @@
             <li><strong>解锁音频：</strong>进入页面后先点「点击解锁音频」，再点「授权麦克风」。iOS 必须在用户手势内启动 AudioContext。</li>
             <li><strong>电脑打开：</strong>在本目录执行 <code>python3 -m http.server 8080</code>，访问 <code>http://localhost:8080</code>。</li>
             <li><strong>12 通道：</strong>默认按常见 12 路 DSP 排列（CH1–CH6 前左/右 高中低音，CH7 中置，CH8/9 后左右，CH10/11 超低音左右，CH12 备用/环绕）。名称、声道侧和单元类型可在「编辑通道」修改，并保存在本机。点按选择，长按独奏，🔈 静音。</li>
+            <li><strong>调音方案：</strong>录音分析完成后自动生成；也可在「通道方案」点「生成调音方案」汇总所有已测数据。方案按 增益 → 极性 → 分频 → 延时 → EQ → 复测 的顺序给出每个通道的具体数值和一句原因；缺数据会提示先测什么，起始值标为「默认值」。EQ 先衰减，提升最多 +3 dB、衰减最多 −6 dB，每通道最多 8 段，窄深谷不硬补。点「应用到通道方案」写入 12 通道表，可复制或导出 TXT/CSV/JSON 照抄进 DSP。</li>
             <li><strong>重要：</strong>浏览器只输出立体声，测试某个通道时请在主机 / DSP 上切换或只打开对应物理通道；本工具按通道声道侧送左/右信号，并逐通道记录延时、电平、极性、分频，汇总在「通道方案」。</li>
             <li><strong>信号发生器：</strong>正弦/扫频/粉红/白噪/猝发/脉冲，调音基础激励。</li>
             <li><strong>RTA：</strong>接麦看实时频谱，可叠加 Flat / House / 车用偏暖目标曲线辅助 EQ。</li>
@@ -656,6 +679,7 @@
   <script src="js/xover.js"></script>
   <script src="js/logger.js"></script>
   <script src="js/analyzer.js"></script>
+  <script src="js/tuneplan.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

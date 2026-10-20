@@ -32,7 +32,7 @@
           <span class="dot" id="micDot"></span>
           <span id="micLabel">麦克风未连接</span>
         </div>
-        <button type="button" class="btn btn-ghost" id="btnMic">连接麦克风</button>
+        <button type="button" class="btn btn-ghost" id="btnMic" title="蓝牙下开麦克风可能切到通话模式，建议用 AUX/USB">授权麦克风</button>
       </div>
     </header>
 
@@ -41,12 +41,27 @@
       测试音可能很大，请先把系统与功放音量调低，再缓慢升高。过高音量可能损坏扬声器与听力。默认输出电平较低。
     </div>
 
+    <button type="button" class="paused-bar" id="audioPausedBar" hidden>⚠ 音频已暂停，点此恢复</button>
+
+    <div class="test-bar">
+      <button type="button" class="btn btn-primary btn-touch" id="btnTestSound">🔊 试音</button>
+      <div class="test-info">
+        <div id="audioDiag" class="audio-diag">音频：未启动</div>
+        <div id="testStatus" class="hint">先点「试音」确认有声音：1 kHz 嘀声 + 1 秒粉红噪声。</div>
+        <label class="out-pick" id="outPickWrap" hidden>输出设备
+          <select id="outDevice"><option value="">系统默认输出</option></select>
+        </label>
+      </div>
+      <button type="button" class="btn btn-ghost btn-touch" id="btnResetOut" title="关闭麦克风并重建音频输出">⟳ 重置音频输出</button>
+    </div>
+
     <div class="unlock-bar" id="unlockBar">
       <p>手机 / iOS 需先点击下方按钮解锁音频，并授权麦克风后才能测量。</p>
       <div class="unlock-actions">
         <button type="button" class="btn btn-primary btn-touch" id="btnUnlockAudio">🔊 点击解锁音频</button>
         <button type="button" class="btn btn-accent btn-touch" id="btnMicUnlock">🎙 授权麦克风</button>
       </div>
+      <p class="bt-hint">🎧 蓝牙下开麦克风可能切到通话模式（声音变小、变差或消失），建议用 AUX / USB 连车机；麦克风只在测量时打开，测完自动关闭。</p>
       <p class="unlock-status" id="unlockStatus">音频未解锁</p>
     </div>
 
@@ -97,6 +112,7 @@
       <button type="button" class="tab" data-tab="spl" role="tab">电平匹配</button>
       <button type="button" class="tab" data-tab="xover" role="tab">分频辅助</button>
       <button type="button" class="tab" data-tab="plan" role="tab">通道方案</button>
+      <button type="button" class="tab" data-tab="ext" role="tab">外录模式</button>
       <button type="button" class="tab" data-tab="analyze" role="tab">录音分析</button>
       <button type="button" class="tab" data-tab="log" role="tab">测量记录</button>
       <button type="button" class="tab" data-tab="help" role="tab">使用说明</button>
@@ -546,6 +562,69 @@
       </section>
 
       <!-- 录音分析 -->
+      <section id="panel-ext" class="panel" role="tabpanel" hidden>
+        <div class="panel-grid">
+          <div class="card">
+            <h2>外录模式（没有 AUX / USB 线也能测）</h2>
+            <p class="hint">蓝牙播放时一开麦克风，手机就会切到「通话模式」，音质变差，声音还可能改从手机喇叭出来。外录模式让「播放」和「录音」分开在两个设备上做，避免这个问题。</p>
+            <h3>方案 C：电脑放音 + 手机录音（推荐）</h3>
+            <ol class="steps">
+              <li><b>电脑</b>用蓝牙连接车机（媒体音频），在电脑浏览器打开本页 →「外录模式」，在右侧「测试音轨」里直接点「▶ 播放」，不用下载。屏幕会用大字显示当前在放什么（如「现在放：左声道 粉红噪声」）。</li>
+              <li>⚠️ 电脑端<b>不要授权麦克风</b>，也不要用电脑录音。一开麦克风，蓝牙可能切到「耳机/通话」模式，音质变差、声音变小。本页播放测试音轨时不会申请麦克风。</li>
+              <li><b>手机</b>不连蓝牙，打开本页 →「外录模式」，先点对应的「外录」按钮开始录音，再在电脑上点播放。手机会自动识别同步咔嗒，判断是哪条测试轨，并按时间表分析（蓝牙延迟不影响结果）。</li>
+              <li>建议顺序：① 自动测试（电平、延时、极性）→ ② 相位测试 → ③ 逐个单元的极性 → ④ 粉红噪声 / 扫频听感。</li>
+            </ol>
+            <h3>方案 A：U 盘播放（只要一部手机）</h3>
+            <ol class="steps">
+              <li>点下方「一键下载全部（ZIP）」或单独下载 <b>01_AUTO_TEST.wav</b>（WAV，44.1 kHz / 16-bit 立体声，无损）。</li>
+              <li>把 <code>CAR_TUNE</code> 文件夹（或 WAV 文件）复制到 U 盘。U 盘最好格式化为 <b>FAT32</b>；如果车机不识别子文件夹，把文件直接放到根目录。</li>
+              <li>车机切到 USB 音源，关闭车机 EQ、环绕和响度，音量调到平时听歌的音量。<b>断开手机蓝牙</b>。</li>
+              <li>手机放在主驾头枕附近（耳朵的位置），点「开始外录」（自动录 45 秒），然后马上在车机上播放 <b>01_AUTO_TEST</b>。</li>
+              <li>录完会自动识别开头的 3 声同步「咔嗒」，按时间表算出左右电平差、左右到达时间差（延时）、左右极性和频响，并生成调音方案。</li>
+            </ol>
+            <p class="hint">车机不支持 WAV？用电脑把文件转成 <b>MP3 320 kbps</b>，例如 <code>ffmpeg -i 01_AUTO_TEST.wav -b:a 320k 01_AUTO_TEST.mp3</code>，或用 Audacity 导出 MP3。网页内不带 MP3 编码器。MP3 编码会让时间差和极性的结果稍微变差，能用 WAV 就用 WAV。</p>
+            <h3>方案 B：两部手机</h3>
+            <ol class="steps">
+              <li><b>手机 A</b> 连车机蓝牙，打开本 App 或任意播放器播放 01_AUTO_TEST.wav，<b>不要</b>在手机 A 上开麦克风。</li>
+              <li><b>手机 B</b> 不连蓝牙，打开本 App →「外录模式」→「开始外录」，放在主驾耳朵位置。</li>
+              <li>手机 B 开始录音后，在手机 A 上播放。蓝牙本身的延迟不影响结果，靠同步咔嗒对齐。</li>
+            </ol>
+            <h3>相位测试（两部手机或 U 盘都能用）</h3>
+            <ol class="steps">
+              <li>播放 <b>09_PHASE_TEST.wav</b>，录音手机点「外录：相位测试（90 秒）」。音轨里每组先放 8 秒左右<b>同相</b>的粉红噪声，停 2 秒，再放 8 秒<b>右声道反相</b>的同一段噪声。一共 4 组：全频、40–200 Hz 低频、80 Hz 分频区、3.5 kHz 分频区。</li>
+              <li>原理：左右相位正确时，同相段两侧声音叠加，应该明显更响（尤其低频）。如果反相段反而更响，说明系统里左右（或该频段的单元）<b>相位相反</b>，App 会建议把一侧反相。</li>
+              <li>想单独查某个分频点（例如 80 Hz 超低音与中低音、3.5 kHz 高音与中音）：在 DSP 里只开这两组单元，再录一次相位测试，看对应那组的结果。</li>
+            </ol>
+            <h3>单元极性（逐个单元）</h3>
+            <ol class="steps">
+              <li>在 DSP 里<b>只开一个单元</b>（其他静音），在「录音分析」的通道里选这个单元。</li>
+              <li>播放 <b>10_POLARITY_EXT.wav</b>，点「外录：单元极性（20 秒）」。会分别报告左、右声道单元的极性是「正」还是「反」，结果写入调音方案第 2 步（极性）。逐个单元重复。</li>
+              <li>手机麦克风放在离该单元 20–50 cm、正对单元的位置，结果最准。超低音的脉冲极性只供参考。</li>
+            </ol>
+            <p class="hint">也可以先用其他录音 App 录好，再到「录音分析」上传文件，同样会自动识别测试轨。</p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-accent btn-touch" id="ttRecord" data-sec="45">🎙 外录：自动测试（45 秒）</button>
+              <button type="button" class="btn btn-accent btn-touch" data-ttrec="90">🎙 外录：相位测试（90 秒）</button>
+              <button type="button" class="btn btn-accent btn-touch" data-ttrec="20" data-keepch="1">🎙 外录：单元极性（20 秒）</button>
+              <button type="button" class="btn btn-touch" id="ttZip">⬇ 一键下载全部（ZIP）</button>
+            </div>
+            <p class="hint" id="ttStatus"></p>
+          </div>
+          <div class="card">
+            <h2>测试音轨</h2>
+            <ul class="tt-list" id="ttList"></ul>
+          </div>
+        </div>
+      </section>
+      <div class="tt-player" id="ttPlayer" hidden>
+        <div class="tt-player-box">
+          <div class="tt-now" id="ttNow"></div>
+          <div class="tt-cue" id="ttCue"></div>
+          <div class="tt-prog"><i id="ttProg"></i></div>
+          <div class="tt-time" id="ttTime"></div>
+          <button type="button" class="btn btn-touch" id="ttStop">■ 停止</button>
+        </div>
+      </div>
       <section id="panel-analyze" class="panel" role="tabpanel" hidden>
         <div class="card">
           <h2>录音分析</h2>
@@ -560,7 +639,7 @@
               <select id="anChan" class="ch-select" data-extra="整车 / 多通道"></select>
             </label>
             <label>或录制秒数
-              <input type="number" id="anRecSec" min="2" max="60" value="10" />
+              <input type="number" id="anRecSec" min="2" max="120" value="10" />
             </label>
             <label>目标曲线
               <select id="anTarget">
@@ -631,6 +710,23 @@
             <li><strong>录音分析：</strong>上传车内录音或直接录制 N 秒，自动给出电平/削波、1/3 倍频程偏差、共振、刺耳/齿音、立体声相关度与时间差，以及最多 8 段参数 EQ 建议（±6 dB）。建议用粉红噪声或熟悉的音乐，麦克风放在主驾头部位置。超过 5 分钟只分析前 5 分钟。iOS 可从「文件」选择语音备忘录导出的 m4a。</li>
             <li><strong>安全：</strong>主电平默认 12%，先低后高。</li>
           </ol>
+          <h3>没声音？（尤其是连蓝牙后）</h3>
+          <ol class="help-list trouble">
+            <li>先点顶部「🔊 试音」，看状态是否为「运行中」；若出现「音频已暂停，点此恢复」，点一下它。</li>
+            <li>iPhone：关闭侧边<strong>静音开关</strong>（新版 Safari 已尽量绕过，但旧系统仍受影响），并用侧键调高<strong>媒体音量</strong>（不是铃声音量）。</li>
+            <li>车机音源切到<strong>「蓝牙音频 / BT Audio」</strong>，而不是电话或收音机；车机音量也要调上来。</li>
+            <li>主输出电平不要太低（建议 20% 以上，再慢慢加）。</li>
+            <li>关闭其他正在用音频的 App（音乐、导航语音、通话、录音）。</li>
+            <li>测量时才会开麦克风：蓝牙下开麦可能切成<strong>通话模式</strong>，声音变小或消失；测完会自动关麦。仍有问题请用 <strong>AUX / USB 有线</strong>连接。</li>
+            <li><strong>声音从手机自己的喇叭出来、不走车机：</strong>
+              ① 手机蓝牙设置里点车机名称，确认勾选了<strong>「媒体音频」</strong>（不只是「通话音频」）；
+              ② iPhone：打开控制中心，在音乐卡片右上角的<strong>输出图标（AirPlay）</strong>里选车机；
+              ③ 先停止所有测量（试音状态显示「麦克风：关闭」），再点<strong>「⟳ 重置音频输出」</strong>，然后「试音」；
+              ④ Android Chrome 可在「输出设备」里直接选蓝牙设备；
+              ⑤ 还不行：用另一台手机/录音笔在主驾位置录音，再上传到「录音分析」，本机只负责播放（不开麦）。</li>
+            <li>断开蓝牙重新连接，然后刷新本页面再点「试音」。</li>
+            <li>仍不行：换有线 AUX，或先用手机扬声器确认 App 能出声。</li>
+          </ol>
           <h3>局限</h3>
           <ul class="help-list">
             <li>麦克风未校准，相位/电平/延时为相对值，非实验室精度。</li>
@@ -662,6 +758,7 @@
     <button type="button" class="more-item" data-tab="spl">电平匹配</button>
     <button type="button" class="more-item" data-tab="xover">分频辅助</button>
     <button type="button" class="more-item" data-tab="plan">12 通道方案</button>
+    <button type="button" class="more-item" data-tab="ext">外录模式</button>
     <button type="button" class="more-item" data-tab="analyze">录音分析</button>
     <button type="button" class="more-item" data-tab="log">测量记录</button>
     <button type="button" class="more-item" data-tab="help">使用说明</button>
@@ -678,6 +775,7 @@
   <script src="js/spl.js"></script>
   <script src="js/xover.js"></script>
   <script src="js/logger.js"></script>
+  <script src="js/testtrack.js"></script>
   <script src="js/analyzer.js"></script>
   <script src="js/tuneplan.js"></script>
   <script src="js/app.js"></script>

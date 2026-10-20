@@ -52,6 +52,7 @@ const SPL = (() => {
   }
 
   function stop() {
+    AudioEngine.releaseMic();
     running = false;
     AudioEngine.stopAll();
     if (anim) cancelAnimationFrame(anim);

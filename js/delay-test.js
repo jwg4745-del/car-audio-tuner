@@ -61,6 +61,7 @@ const DelayTest = (() => {
     src.start(AudioEngine.now() + 0.05);
 
     const cap = await captureP;
+    AudioEngine.releaseMic();
     AudioEngine.stopAll();
     el('delayPlay').disabled = false;
     el('delayStop').disabled = true;

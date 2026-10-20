@@ -133,7 +133,8 @@ const Duo = (() => {
     btn.onclick = async () => {
       if (p) { stop(); cue.textContent = '已停止'; return; }
       const t = track ? track() : build(typeof kind === 'function' ? kind() : kind);
-      await AudioEngine.resume(true);
+      AudioEngine.unlockSync();
+      await AudioEngine.resume();
       const ctx = AudioEngine.getCtx(), buf = ctx.createBuffer(2, t.L.length, TestTrack.SR);
       buf.copyToChannel(t.L, 0); buf.copyToChannel(t.R, 1);
       const src = ctx.createBufferSource(); src.buffer = buf; src.loop = !!loop; src.connect(ctx.destination);
@@ -182,7 +183,7 @@ const Duo = (() => {
     };
     return { stop: stopRec };
   }
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"' }[c]));
   /** 角色切换（播放端/录音端），状态存 localStorage */
   function roles(attr, key, onRender) {
     let role = 'player'; try { role = localStorage.getItem(key) || 'player'; } catch (_) {}

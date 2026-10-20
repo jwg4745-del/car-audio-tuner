@@ -629,3 +629,6 @@ select, input[type="number"], input[type="text"], textarea {
 .dsp-wrap{overflow-x:auto}.dsp-tab{border-collapse:collapse;font-size:13px;min-width:640px}.dsp-tab td,.dsp-tab th{border:1px solid rgba(255,255,255,.12);padding:5px 6px;text-align:left;vertical-align:top}.dsp-tab tr.mute{opacity:.4}
 .ls-q{margin:10px 0}.ls-row{display:flex;align-items:center;gap:8px}.ls-row input{flex:1}.ls-row small{width:48px;opacity:.7;font-size:12px;text-align:center}
 #plUndo{font-size:18px}
+/* 修复：.sp 的 display:flex 覆盖了 .panel 的隐藏 → 所有 .sp 页面叠在一起 */
+.panel:not(.active),[hidden]{display:none !important}
+.panel.sp.active{display:flex}

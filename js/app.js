@@ -180,7 +180,9 @@ const App = (() => {
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'https:' && location.protocol !== 'http:') return;
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch((e) => {
+      const hadCtrl = !!navigator.serviceWorker.controller; let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtrl && !reloaded) { reloaded = true; location.reload(); } });
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((r) => { try { r.update(); } catch (_) {} }).catch((e) => {
         console.warn('SW register failed', e);
       });
     });

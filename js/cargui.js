@@ -377,7 +377,7 @@ const CarGui = (() => {
   function rtaPage() {
     const ui = wrap('rta', {
       title: '频谱 RTA', tip: '请在 DSP <b class="red">打开要看的喇叭</b>（或全部）。录音端看实时频谱；播放端可放粉噪。',
-      allOn: true, playId: 'rtaPink', recId: 'rtaStart', histLabel: '清空', size: 'small',
+      allOn: true, playId: 'rtaDuoPlay', recId: 'rtaStart', histLabel: '清空', size: 'small',
     });
     if (!ui) return;
     const chart = document.querySelector('#panel-rta .chart-card') || $('rtaCanvas');
@@ -385,16 +385,16 @@ const CarGui = (() => {
     const go = ui.box.querySelector('[data-go]');
     go.onclick = () => {
       if (Role.get() === 'recorder') { const b = $('rtaStart'); if (b) b.click(); }
-      else { const b = $('rtaPink'); if (b) b.click(); }
+      else { const b = $('rtaDuoPlay'); if (b) b.click(); }
     };
     const sync = () => {
       const rec = Role.get() === 'recorder';
-      const b = rec ? $('rtaStart') : $('rtaPink');
+      const b = rec ? $('rtaStart') : $('rtaDuoPlay');
       const busy = b && (b.classList.contains('busy') || /停止|关/.test(b.textContent));
       go.textContent = busy ? '■ 停止' : (rec ? '● 开始分析' : '▶ 播放粉噪');
       go.classList.toggle('busy', !!busy); go.disabled = false;
     };
-    [$('rtaStart'), $('rtaPink')].filter(Boolean).forEach((el) => new MutationObserver(sync).observe(el, { childList: true, characterData: true, subtree: true, attributes: true }));
+    [$('rtaStart'), $('rtaDuoPlay')].filter(Boolean).forEach((el) => new MutationObserver(sync).observe(el, { childList: true, characterData: true, subtree: true, attributes: true }));
     if (typeof Role !== 'undefined') Role.onChange(sync); sync();
   }
 
@@ -447,19 +447,30 @@ const CarGui = (() => {
       });
     };
     paint();
+    const SIG = { pink: 'pink', tone: 'sine', sweep: 'sweep', chirp: 'impulse' };
+    const st = box.querySelector('[data-status]');
     box.querySelectorAll('[data-sig]').forEach((b) => {
-      b.onclick = () => {
-        sig = b.dataset.sig; box.querySelectorAll('[data-sig]').forEach((x) => x.classList.toggle('on', x === b));
-        const sel = $('genType') || $('genSig'); if (sel) { sel.value = sig; sel.dispatchEvent(new Event('change')); }
-      };
+      b.onclick = () => { sig = b.dataset.sig; box.querySelectorAll('[data-sig]').forEach((x) => x.classList.toggle('on', x === b)); $('genType').value = SIG[sig]; };
     });
+    $('genType').value = 'pink';
     const go = box.querySelector('[data-go]');
-    go.onclick = () => {
-      if (Role.get() === 'recorder') return alert('发生器请在播放端使用');
-      const b = $('genPlay') || $('genStart'); if (b) b.click();
-      else if (typeof Generator !== 'undefined' && Generator.play) Generator.play();
+    const isOn = () => !$('genStop').disabled;
+    const show = () => {
+      const on = isOn(); go.textContent = on ? '■ 停止' : '▶ 开始播放'; go.classList.toggle('busy', on);
+      const sideTxt = side === 'L' ? '左 L' : side === 'R' ? '右 R' : '左右 L+R';
+      st.textContent = on ? `播放中 · ${$('genType').selectedOptions[0].text} · ${$('genType').value === 'sine' ? $('genHz').value + ' Hz · ' : ''}${sideTxt} · 电平 ${Math.round(AudioEngine.getMasterLevel())}%` : `就绪 · 输出 ${sideTxt}`;
     };
-    box.querySelector('.cg-hist').onclick = () => { if (typeof Generator !== 'undefined' && Generator.stop) Generator.stop(); const s = $('genStop'); if (s) s.click(); };
+    new MutationObserver(show).observe($('genStop'), { attributes: true });
+    go.onclick = () => {
+      if (isOn()) { Generator.stop(); show(); return; }
+      if (Role.get() === 'recorder' && !confirm('这部是录音端。仍要在这部手机放声音吗？')) return;
+      AudioEngine.unlockSync();
+      $('genRoute').value = side === 'L' ? 'l' : side === 'R' ? 'r' : 'stereo';
+      if (Channels.allSelectedMuted && Channels.allSelectedMuted()) $('genRoute').value = $('genRoute').value; // route 显式，不受通道静音影响
+      Generator.play(); show();
+    };
+    box.querySelector('.cg-hist').onclick = () => { Generator.stop(); show(); };
+    show();
   }
 
   // ---------- 首页 ----------
@@ -507,7 +518,15 @@ const CarGui = (() => {
     document.querySelectorAll('.header').forEach((h) => h.classList.add('cg-sticky-head'));
   }
 
+  function globalUnlock() {
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('.cg-go,[data-go],.sp-big,#lsClips button,#rtaDuoPlay');
+      if (!b || (typeof Role !== 'undefined' && Role.get() === 'recorder')) return;
+      AudioEngine.unlockSync();
+    }, true);
+  }
   function init() {
+    globalUnlock();
     home();
     patchApp();
     stickyRole();

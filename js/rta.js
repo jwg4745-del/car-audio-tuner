@@ -104,6 +104,11 @@ const RTA = (() => {
     const data = new Float32Array(bins);
     analyser.getFloatFrequencyData(data);
     const sr = AudioEngine.sampleRate();
+    if (typeof Cal !== 'undefined' && Cal.active()) {
+      const key = Cal.label() + bins + sr;
+      if (!loop.calKey || loop.calKey !== key) { loop.calKey = key; loop.calArr = new Float32Array(bins); for (let i = 1; i < bins; i++) loop.calArr[i] = Cal.corr(i * sr / (2 * bins)); }
+      for (let i = 1; i < bins; i++) data[i] += loop.calArr[i];
+    }
     const mode = el('rtaMode').value;
     const usePeak = el('rtaPeakHold').checked;
     const useAvg = el('rtaAvg').checked;

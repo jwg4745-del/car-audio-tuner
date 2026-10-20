@@ -608,3 +608,24 @@ select, input[type="number"], input[type="text"], textarea {
 .ci-iss{text-align:left;font-size:15px;margin:10px 0}.ci-iss ol{margin:6px 0 0 20px;padding:0}
 .ci-warn{text-align:left;font-size:14px;color:#f0b429}
 #panel-carid .sp-opt{display:flex;align-items:center;gap:8px;font-size:15px}
+
+/* 专业功能 */
+.sp-verdict.small{font-size:clamp(22px,6vw,30px)}
+.pro-canvas{width:100%;height:auto;background:rgba(0,0,0,.25);border-radius:12px;margin-top:10px}
+.mp-pos{font-size:20px;text-align:center;line-height:1.5}
+.mp-dots{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.mp-dot{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.25);font-size:14px}
+.mp-dot.done{background:#2fd3a5;color:#04130e;border-color:#2fd3a5}
+.mp-dot.now{border:2px solid #ff4d5e}
+.cal-grid,.pro-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cal-grid button,.pro-grid button{padding:16px 8px;font-size:17px;font-weight:600;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:inherit;display:flex;flex-direction:column;gap:4px;align-items:center}
+.cal-grid button small,.pro-grid button small{font-weight:400;opacity:.6;font-size:12px}
+.cal-grid button.on,.pro-grid button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.im-ear{text-align:center;padding:14px}
+.ci-warn{font-size:14px;color:#f0b429;text-align:left}
+.xc-steps{margin:0;padding-left:22px;line-height:1.7;font-size:15px}.xc-steps li.done{opacity:.6}
+.pl-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)}.pl-row small{display:block;opacity:.6;font-size:12px}.pl-row .btn{margin-left:4px}
+.pl-new{display:flex;gap:8px;margin-top:8px}.pl-new input{flex:1;font-size:16px;padding:10px;border-radius:10px}
+.dsp-wrap{overflow-x:auto}.dsp-tab{border-collapse:collapse;font-size:13px;min-width:640px}.dsp-tab td,.dsp-tab th{border:1px solid rgba(255,255,255,.12);padding:5px 6px;text-align:left;vertical-align:top}.dsp-tab tr.mute{opacity:.4}
+.ls-q{margin:10px 0}.ls-row{display:flex;align-items:center;gap:8px}.ls-row input{flex:1}.ls-row small{width:48px;opacity:.7;font-size:12px;text-align:center}
+#plUndo{font-size:18px}

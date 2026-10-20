@@ -168,7 +168,7 @@ const Analyzer = (() => {
       const lo = fc / Math.pow(2, 1 / 6), hi = fc * Math.pow(2, 1 / 6);
       let s = 0, n = 0;
       for (let k = 1; k < freqs.length; k++) if (freqs[k] >= lo && freqs[k] < hi) { s += spec[k]; n++; }
-      if (n) bands.push({ fc, level: pdb(s / n) });
+      if (n) bands.push({ fc, level: pdb(s / n) + (typeof Cal !== 'undefined' ? Cal.corr(fc) : 0) });
     }
     return bands;
   }

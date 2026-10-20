@@ -1,5 +1,5 @@
 /* 汽车音响调音 — 离线静态壳 */
-const CACHE = 'car-audio-tuner-v12';
+const CACHE = 'car-audio-tuner-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -19,13 +19,15 @@ const ASSETS = [
   './js/testtrack.js',
   './js/simple.js',
   './js/carid.js',
+  './js/duo.js',
+  './js/pro1.js',
+  './js/pro2.js',
   './js/analyzer.js',
   './js/tuneplan.js',
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/icon.svg',
-  './assets/apple-touch-icon.png',
-  './README.md'
+  './assets/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {

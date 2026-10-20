@@ -8,7 +8,14 @@ const TestTrack = (() => {
   const PULSES = [['L', 27.5], ['R', 28.5], ['L', 29.5], ['R', 30.5]];
   const AUTO_LEN = 32;
   // 相位测试轨：第 4 声咔嗒在 +1.5 s；每对 = 8 s 同相 + 2 s 静音 + 8 s 右声道反相 + 2 s 静音
-  const PHASE_MARK = 1.5, POL_MARK = 1.75;
+  const PHASE_MARK = 1.5, POL_MARK = 1.75, SIMPLE_MARK = 1.25;
+  // 极简正反相轨（约 32 秒）：第 4 声咔嗒 +1.25 s；段1 同相 2.5–8.5 / 反相 9.5–15.5；段2 同相 16.5–22.5 / 反相 23.5–29.5
+  const SIMPLE_SEGS = [2.5, 16.5], SIMPLE_SEG = 6, SIMPLE_LEN = 30.5;
+  const SIMPLE_PAIRS = {
+    lr: { name: '左右整体', planId: 'full', bands: [null, [40, 200]], labels: ['全频', '低频'] },
+    sub: { name: '超低音 vs 门板', planId: 'x80', bands: [[40, 160], [50, 130]], labels: ['低频', '分频区 80 Hz'] },
+    tw: { name: '高音 vs 中音', planId: 'x3k5', bands: [[1800, 6000], [2500, 5000]], labels: ['中高频', '分频区 3.5 kHz'] },
+  };
   const PHASE_PAIRS = [
     { id: 'full', name: '全频', band: null, start: 3 },
     { id: 'bass', name: '低频 40–200 Hz', band: [40, 200], start: 23 },
@@ -72,7 +79,7 @@ const TestTrack = (() => {
   function addAt(out, tpl, at, amp) { for (let i = 0; i < tpl.length && at + i < out.length; i++) if (at + i >= 0) out[at + i] += tpl[i] * amp; }
 
   /** 返回 { name, file, desc, L, R } */
-  function buildTrack(id) {
+  function buildTrack(id, opt) {
     const S = (sec) => Math.round(sec * SR);
     const mk = (sec) => [new Float32Array(S(sec)), new Float32Array(S(sec))];
     if (id === 'auto') {
@@ -97,6 +104,18 @@ const TestTrack = (() => {
         for (let i = 0; i < sig.length; i++) { L[a + i] += sig[i]; R[a + i] += sig[i]; L[b + i] += sig[i]; R[b + i] -= sig[i]; }
       });
       return { file: '09_PHASE_TEST.wav', name: '相位测试轨', desc: '同步咔嗒 + 4 组「同相 8 秒 / 右反相 8 秒」（全频、40–200 Hz、80 Hz 区、3.5 kHz 区），约 85 秒', L, R };
+    }
+    if (id === 'simple') {
+      const pr = SIMPLE_PAIRS[opt] || SIMPLE_PAIRS.lr;
+      const [L, R] = mk(LEAD + SIMPLE_LEN + 1);
+      const T0 = S(LEAD), click = clickTemplate(SR);
+      [...SYNC, SIMPLE_MARK].forEach((t) => { addAt(L, click, T0 + S(t), 0.9); addAt(R, click, T0 + S(t), 0.9); });
+      SIMPLE_SEGS.forEach((st, k) => {
+        const sig = bandPink(S(SIMPLE_SEG), pr.bands[k], 41 + k);
+        const a = T0 + S(st), b = T0 + S(st + SIMPLE_SEG + 1);
+        for (let i = 0; i < sig.length; i++) { L[a + i] += sig[i]; R[a + i] += sig[i]; L[b + i] += sig[i]; R[b + i] -= sig[i]; }
+      });
+      return { file: 'SIMPLE_PHASE_' + (opt || 'lr').toUpperCase() + '.wav', name: '正反相 · ' + pr.name, desc: '', L, R, pair: opt || 'lr' };
     }
     if (id === 'polExt') {
       const [L, R] = mk(LEAD + POLX_LEN + 1);
@@ -204,8 +223,8 @@ const TestTrack = (() => {
           const r = xcorrPeak(x, tpl, est, Math.round(0.004 * sr));
           const t0 = est + r.lag;
           const near = (sec) => peaks.some((p) => Math.abs(p.i - peaks[a].i - sec * sr) <= tol);
-          const type = near(PHASE_MARK) ? 'phase' : near(POL_MARK) ? 'polExt' : 'auto';
-          const len = type === 'phase' ? PHASE_LEN - 1.5 : type === 'polExt' ? POLX_LEN - 0.5 : AUTO_LEN - 1.2;
+          const type = near(PHASE_MARK) ? 'phase' : near(POL_MARK) ? 'polExt' : near(SIMPLE_MARK) ? 'simple' : 'auto';
+          const len = type === 'simple' ? SIMPLE_LEN - 0.5 : type === 'phase' ? PHASE_LEN - 1.5 : type === 'polExt' ? POLX_LEN - 0.5 : AUTO_LEN - 1.2;
           return { t0, type, complete: t0 + Math.round(len * sr) <= x.length, snr: peaks[a].v / floor };
         }
       }
@@ -267,6 +286,27 @@ const TestTrack = (() => {
     });
     return { type: 'phase', t0Sec: det.t0 / sr, noiseDb: +noise.toFixed(1), pairs, anyInverted: pairs.some((p) => p.verdict === '相位相反') };
   }
+  /** 极简正反相：两段 同相 vs 右反相 的能量差。>2 dB 且两段一致才下结论 */
+  function analyzeSimple(x, sr, det, pairId) {
+    const pr = SIMPLE_PAIRS[pairId] || SIMPLE_PAIRS.lr;
+    const T = (sec) => det.t0 + Math.round(sec * sr);
+    const filt = (s, band) => { if (!band) return s; let y = s; y = biquad(y, 'hp', band[0], 0.707, sr); y = biquad(y, 'lp', band[1], 0.707, sr); return y; };
+    const lvl = (a, b, band) => { const y = filt(x.subarray(T(a), T(b)), band); return dB(rms(y, Math.floor(0.15 * sr), y.length)); };
+    const segs = SIMPLE_SEGS.map((st, k) => {
+      const band = pr.bands[k] || [60, 8000];
+      const n = lvl(1.95, 2.45, band) ;
+      const a = lvl(st + 0.4, st + SIMPLE_SEG - 0.4, band), b = lvl(st + SIMPLE_SEG + 1.4, st + 2 * SIMPLE_SEG + 0.6, band);
+      return { label: pr.labels[k], inDb: +a.toFixed(1), invDb: +b.toFixed(1), noiseDb: +n.toFixed(1), diffDb: +(a - b).toFixed(1), snrDb: +(Math.max(a, b) - n).toFixed(1) };
+    });
+    const quiet = segs.some((s) => s.snrDb < 8);
+    const d = (segs[0].diffDb + segs[1].diffDb) / 2, agree = Math.sign(segs[0].diffDb) === Math.sign(segs[1].diffDb);
+    let verdict, reason = '';
+    if (quiet) { verdict = 'unknown'; reason = '声音太小或环境太吵：调大音量、关空调后再测'; }
+    else if (d >= 2 && agree) verdict = 'ok';
+    else if (d <= -2 && agree) verdict = 'inverted';
+    else { verdict = 'unknown'; reason = '同相和反相差别太小：可能两路时间差太大或只有一路在响，先调好延时再测'; }
+    return { type: 'simple', pair: pairId || 'lr', pairName: pr.name, planId: pr.planId, t0Sec: det.t0 / sr, diffDb: +d.toFixed(1), segs, verdict, reason };
+  }
   /** 单元极性外录轨：左右各 8 个脉冲，取互相关符号多数表决 */
   function analyzePolExt(x, sr, det) {
     const T = (sec) => det.t0 + Math.round(sec * sr);
@@ -284,7 +324,8 @@ const TestTrack = (() => {
         const r = xcorrPeak(x, pu, c0, win);
         if (r.val > 0) pos++; else if (r.val < 0) neg++;
       }
-      const present = lv - noise > 8;
+      let pk = 0; for (let i = T(POLX[s].p0 - 0.05), e = T(POLX[s].p0 + POLX_N * 0.5); i < e && i < x.length; i++) pk = Math.max(pk, Math.abs(x[i]));
+      const present = dB(pk) - noise > 18;
       out[s] = { present, levelDb: +lv.toFixed(1), pos, neg, polarity: !present ? '无声' : pos >= 6 ? '正' : neg >= 6 ? '反' : '不确定', arrivalMs: chirpOk ? +(c.lag / sr * 1000).toFixed(2) : null };
     });
     return { type: 'polExt', t0Sec: det.t0 / sr, noiseDb: +noise.toFixed(1), L: out.L, R: out.R };
@@ -366,6 +407,6 @@ const TestTrack = (() => {
     });
   }
 
-  return { SR, SEG, CHIRPS, PULSES, PHASE_PAIRS, TRACK_IDS, buildTrack, wavBytes, zipBytes, crc32, detect, analyzeTrack, analyzePhase, analyzePolExt, play, stopPlay, init };
+  return { SR, SEG, CHIRPS, PULSES, PHASE_PAIRS, TRACK_IDS, buildTrack, wavBytes, zipBytes, crc32, detect, analyzeTrack, analyzePhase, analyzePolExt, analyzeSimple, SIMPLE_PAIRS, play, stopPlay, init };
 })();
 if (typeof module !== 'undefined') module.exports = TestTrack;

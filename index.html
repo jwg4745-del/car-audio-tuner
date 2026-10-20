@@ -104,7 +104,8 @@
     </div>
 
     <nav class="tabs" role="tablist">
-      <button type="button" class="tab active" data-tab="gen" role="tab">信号发生器</button>
+      <button type="button" class="tab active" data-tab="simple" role="tab">正反相</button>
+      <button type="button" class="tab" data-tab="gen" role="tab">信号发生器</button>
       <button type="button" class="tab" data-tab="rta" role="tab">RTA 频谱</button>
       <button type="button" class="tab" data-tab="phase" role="tab">相位测试</button>
       <button type="button" class="tab" data-tab="polarity" role="tab">极性检测</button>
@@ -119,8 +120,50 @@
     </nav>
 
     <main class="panels">
+      <!-- 0. 极简正反相（两台设备） -->
+      <section id="panel-simple" class="panel active sp" role="tabpanel">
+        <div class="sp-seg">
+          <button type="button" data-spmode="pair">两个一起<small>（相位）</small></button>
+          <button type="button" data-spmode="single">单个喇叭<small>（极性）</small></button>
+        </div>
+        <div class="sp-seg sp-role">
+          <button type="button" data-sprole="player">🔊 我是播放端</button>
+          <button type="button" data-sprole="recorder">🎙 我是录音端</button>
+        </div>
+        <div id="spPairWrap" class="sp-opt">
+          <label>测哪一对 <select id="spPair"><option value="lr">左右整体</option><option value="sub">超低音 vs 门板</option><option value="tw">高音 vs 中音</option></select></label>
+          <p class="sp-hint" id="spPairHint">在 DSP 里只留这两路出声</p>
+        </div>
+        <div id="spChWrap" class="sp-opt" hidden>
+          <p class="sp-hint">在 DSP 里只留这一路出声 · 两台设备选同一个喇叭 <span id="spChDone"></span> <button type="button" class="sp-link" id="spReset">清空</button></p>
+          <div class="sp-chgrid" id="spChGrid"></div>
+          <p class="sp-now">当前：<b id="spChNow"></b></p>
+        </div>
+        <div id="spPlayer" class="sp-main">
+          <button type="button" class="sp-big" id="spPlay">▶ 开始放</button>
+          <div class="sp-cue" id="spCue">先在录音端点「● 开始录」</div>
+          <div class="sp-count" id="spCount"></div>
+          <p class="sp-hint">播放端不会打开麦克风，蓝牙保持音乐模式</p>
+        </div>
+        <div id="spRecorder" class="sp-main" hidden>
+          <button type="button" class="sp-big rec" id="spRec">● 开始录</button>
+          <p class="sp-cue small">先点录，再在播放端点放</p>
+          <div class="sp-count" id="spRecStatus"></div>
+        </div>
+        <div class="sp-result" id="spResult" hidden>
+          <div class="sp-verdict" id="spVerdict"></div>
+          <div class="sp-reason" id="spReason"></div>
+          <div class="sp-actions">
+            <button type="button" class="btn btn-touch" id="spAgain">再测一次</button>
+            <button type="button" class="btn btn-accent btn-touch" id="spNext" hidden>下一个喇叭 →</button>
+            <button type="button" class="btn btn-touch" id="spWrite">写入调音方案</button>
+          </div>
+          <details class="sp-det"><summary>详细数据</summary><pre id="spDetail"></pre></details>
+        </div>
+      </section>
+
       <!-- 1. 信号发生器 -->
-      <section id="panel-gen" class="panel active" role="tabpanel">
+      <section id="panel-gen" class="panel" role="tabpanel" hidden>
         <div class="panel-grid">
           <div class="card">
             <h2>信号发生器</h2>
@@ -747,13 +790,14 @@
   </div>
 
   <nav class="bottom-nav" id="bottomNav" aria-label="主导航">
-    <button type="button" class="bnav active" data-tab="gen"><span class="bnav-ico">〰</span><span>发生器</span></button>
+    <button type="button" class="bnav active" data-tab="simple"><span class="bnav-ico">±</span><span>正反相</span></button>
+    <button type="button" class="bnav" data-tab="gen"><span class="bnav-ico">〰</span><span>发生器</span></button>
     <button type="button" class="bnav" data-tab="rta"><span class="bnav-ico">▣</span><span>频谱</span></button>
     <button type="button" class="bnav" data-tab="phase"><span class="bnav-ico">φ</span><span>相位</span></button>
-    <button type="button" class="bnav" data-tab="delay"><span class="bnav-ico">⏱</span><span>延时</span></button>
     <button type="button" class="bnav" data-tab="more" id="bnavMore"><span class="bnav-ico">···</span><span>更多</span></button>
   </nav>
   <div class="more-sheet" id="moreSheet" hidden>
+    <button type="button" class="more-item" data-tab="delay">延时对齐</button>
     <button type="button" class="more-item" data-tab="polarity">极性检测</button>
     <button type="button" class="more-item" data-tab="spl">电平匹配</button>
     <button type="button" class="more-item" data-tab="xover">分频辅助</button>
@@ -776,6 +820,7 @@
   <script src="js/xover.js"></script>
   <script src="js/logger.js"></script>
   <script src="js/testtrack.js"></script>
+  <script src="js/simple.js"></script>
   <script src="js/analyzer.js"></script>
   <script src="js/tuneplan.js"></script>
   <script src="js/app.js"></script>

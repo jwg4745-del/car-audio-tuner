@@ -1,5 +1,5 @@
 /* 汽车音响调音 — 离线静态壳 */
-const CACHE = 'car-audio-tuner-v19';
+const CACHE = 'car-audio-tuner-v20';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './js/audio-engine.js',
   './js/app.js',
   './js/role.js',
+  './js/cargui.js',
   './js/channels.js',
   './js/generator.js',
   './js/rta.js',

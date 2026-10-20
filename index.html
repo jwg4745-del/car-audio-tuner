@@ -1020,8 +1020,9 @@
   <script src="js/pro3.js"></script>
   <script src="js/analyzer.js"></script>
   <script src="js/tuneplan.js"></script>
+  <script src="js/cargui.js"></script>
   <script src="js/app.js"></script>
   <script src="js/role.js"></script>
-  <script>window.addEventListener("load",function(){setTimeout(function(){Role.init()},0)})</script>
+  <script>window.addEventListener("load",function(){setTimeout(function(){Role.init();try{CarGui.init()}catch(e){console.error(e)}},0)})</script>
 </body>
 </html>

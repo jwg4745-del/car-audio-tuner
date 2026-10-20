@@ -365,7 +365,7 @@ const TestTrack = (() => {
   async function play(id) {
     stopPlay();
     const t = buildTrack(id);
-    await AudioEngine.resume(true);
+    AudioEngine.unlockSync(); await AudioEngine.resume();
     const ctx = AudioEngine.getCtx();
     const buf = ctx.createBuffer(2, t.L.length, SR); buf.copyToChannel(t.L, 0); buf.copyToChannel(t.R, 1);
     const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);

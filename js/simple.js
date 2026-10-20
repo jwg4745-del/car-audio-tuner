@@ -41,7 +41,8 @@ const Simple = (() => {
   async function play() {
     if (player) { stopPlay(); $('spCue').textContent = '已停止'; return; }
     const t = st.mode === 'single' ? TestTrack.buildTrack('polExt') : TestTrack.buildTrack('simple', st.pair);
-    await AudioEngine.resume(true);
+    AudioEngine.unlockSync();
+    await AudioEngine.resume();
     const ctx = AudioEngine.getCtx();
     const buf = ctx.createBuffer(2, t.L.length, TestTrack.SR); buf.copyToChannel(t.L, 0); buf.copyToChannel(t.R, 1);
     const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);

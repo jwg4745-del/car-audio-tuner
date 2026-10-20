@@ -160,7 +160,7 @@ const CarId = (() => {
   async function play() {
     if (player) { stopPlay(); $('ciCue').textContent = '已停止'; return; }
     const t = TestTrack.buildTrack('car');
-    await AudioEngine.resume(true);
+    AudioEngine.unlockSync(); await AudioEngine.resume();
     const ctx = AudioEngine.getCtx();
     const buf = ctx.createBuffer(2, t.L.length, TestTrack.SR); buf.copyToChannel(t.L, 0); buf.copyToChannel(t.R, 1);
     const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
@@ -210,7 +210,7 @@ const CarId = (() => {
   function finish(d) { $('ciRecStatus').textContent = ''; if (!d) return; $('ciRecStatus').textContent = '分析中…'; setTimeout(() => { const r = judge(d.x, d.sr, st.target); $('ciRecStatus').textContent = ''; show(r); }, 30); }
 
   // ---------- 结果 ----------
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"' }[c]));
   function show(r) {
     last = r;
     const card = $('ciResult'); card.hidden = false;

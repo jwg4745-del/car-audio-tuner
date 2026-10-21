@@ -128,3 +128,8 @@
 ### 采样率
 - 分析：用录音实际 sr（常 48k）
 - 生成/导出测试音：**44100** 与检测模板一致更稳；若录音非 44.1k，模板按实际 sr 重算（现网 `clickTemplate(sr)` 已这样做）
+
+### 原生（SwiftUI）存储备注
+- Web：`localStorage` 键 `cat-crossover-mode-v1`
+- iOS：可用 `UserDefaults` 键 `crossoverMode`（同值 `active`/`passive`）；语义与 §4.1 一致，勿另造第三套规则。
+- 被动合并：前声场同侧 `tweeter`+`mid`+`woofer` →「前左/前右」；代表通道建议取该侧低音（woofer）id，延时整路写入全部成员。

@@ -84,8 +84,14 @@
     <!-- 12 通道选择 -->
     <div class="channel-panel">
       <div class="chp-head">
-        <span class="bar-title">12 通道</span>
+        <span class="bar-title" id="chPanelTitle">12 通道</span>
         <span class="ch-current" id="chCurrent"></span>
+      </div>
+      <div class="xo-mode-bar" role="group" aria-label="分频方式">
+        <span class="xo-mode-label">分频方式</span>
+        <button type="button" class="xo-mode-btn on" data-xo-mode="active" aria-pressed="true">主动分频</button>
+        <button type="button" class="xo-mode-btn" data-xo-mode="passive" aria-pressed="false">被动分频</button>
+        <p class="hint xo-mode-hint" data-xo-hint>主动分频：每个喇叭单元独立 DSP 通道，可单独调分频点、延时和相位。</p>
       </div>
       <div class="ch-grid" id="chGrid" role="group" aria-label="12 通道"></div>
       <div class="ch-actions">
@@ -664,6 +670,7 @@
           <div class="card">
             <h2>分频辅助</h2>
             <p class="hint">Butterworth 高通/低通预览，听感确认分频点与斜率（无源/有源分频调校）。</p>
+            <div class="tip-box" id="xoPassiveBanner" hidden>当前为<strong>被动分频</strong>：分频点由无源分频器决定，软件里只能测量和验证，不能把 HPF/LPF 写入通道。试听滤波器仍可用于对照听感。</div>
             <div class="form-row">
               <label>通道
                 <select id="xoChan" class="ch-select"></select>
@@ -923,6 +930,7 @@
             <li><strong>手机打开：</strong>用手机浏览器访问部署地址（须 <strong>HTTPS</strong>）。iOS Safari 不支持明文 HTTP 的麦克风。可「添加到主屏幕」以类 App 全屏使用（PWA）。</li>
             <li><strong>解锁音频：</strong>进入页面后先点「点击解锁音频」，再点「授权麦克风」。iOS 必须在用户手势内启动 AudioContext。</li>
             <li><strong>电脑打开：</strong>在本目录执行 <code>python3 -m http.server 8080</code>，访问 <code>http://localhost:8080</code>。</li>
+            <li><strong>分频方式：</strong>首页或通道栏可选<strong>主动分频</strong>（默认）或<strong>被动分频</strong>，存 <code>cat-crossover-mode-v1</code>。主动：每单元独立 DSP 通道，可调分频/延时/相位。被动：前声场同侧高中低合并为「前左/前右」显示；分频由无源分频器决定，软件仅测量验证；延时按合并通道调。</li>
             <li><strong>12 通道：</strong>默认空白通用布局（前左/前右高中低、中置、后左/后右、超低音左/右、备用），只预填单元类型对应的分频起点；增益、延时、极性、EQ 均为空，测完再填。名称与声道侧可在「编辑通道」修改，保存在本机。点按选择，长按独奏，🔈 静音。</li>
             <li><strong>调音方案：</strong>录音分析完成后自动生成；也可在「通道方案」点「生成调音方案」汇总所有已测数据。方案按 增益 → 极性 → 分频 → 延时 → EQ → 复测 的顺序给出每个通道的具体数值和一句原因；缺数据会提示先测什么，起始值标为「默认值」。EQ 先衰减，提升最多 +3 dB、衰减最多 −6 dB，每通道最多 8 段，窄深谷不硬补。点「应用到通道方案」写入 12 通道表，可复制或导出 TXT/CSV/JSON 照抄进 DSP。</li>
             <li><strong>重要：</strong>浏览器只输出立体声，测试某个通道时请在主机 / DSP 上切换或只打开对应物理通道；本工具按通道声道侧送左/右信号，并逐通道记录延时、电平、极性、分频，汇总在「通道方案」。</li>

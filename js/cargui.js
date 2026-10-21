@@ -1,7 +1,7 @@
 /** 俯视车图引导式界面：延时/极性/声压 + 其余测量页共用壳；首页宫格 */
 const CarGui = (() => {
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"' }[c]));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const r3 = (v) => Math.round(v * 1000) / 1000;
   const PINS = [
     { id: 11, n: '左前高', x: 0, y: 17, s: 'L' }, { id: 12, n: '右前高', x: 100, y: 17, s: 'R' },
@@ -486,9 +486,17 @@ const CarGui = (() => {
   function home() {
     const main = document.querySelector('main.panels'); if (!main || $('panel-home')) return;
     const sec = document.createElement('section'); sec.id = 'panel-home'; sec.className = 'panel'; sec.setAttribute('role', 'tabpanel'); sec.hidden = true;
-    sec.innerHTML = `<div class="hm"><h2>汽车音响调音</h2><p class="hm-sub">两部手机：一部连车载蓝牙播放，一部放主驾头部录音</p><button type="button" class="hm-role" onclick="Role.ask()">切换本机身份</button><div class="hm-grid">${TILES.map(([t, i, n]) => `<button type="button" class="hm-tile" data-go="${t}"><span>${i}</span>${n}</button>`).join('')}</div></div>`;
+    sec.innerHTML = `<div class="hm"><h2>汽车音响调音</h2><p class="hm-sub">两部手机：一部连车载蓝牙播放，一部放主驾头部录音</p><button type="button" class="hm-role" onclick="Role.ask()">切换本机身份</button>
+      <div class="xo-mode-bar hm-xo" role="group" aria-label="分频方式">
+        <span class="xo-mode-label">分频方式</span>
+        <button type="button" class="xo-mode-btn" data-xo-mode="active" aria-pressed="false">主动分频</button>
+        <button type="button" class="xo-mode-btn" data-xo-mode="passive" aria-pressed="false">被动分频</button>
+        <p class="hint xo-mode-hint" data-xo-hint></p>
+      </div>
+      <div class="hm-grid">${TILES.map(([t, i, n]) => `<button type="button" class="hm-tile" data-go="${t}"><span>${i}</span>${n}</button>`).join('')}</div></div>`;
     main.prepend(sec);
     sec.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => App.switchTab(b.dataset.go); });
+    if (typeof Channels !== 'undefined') { Channels.bindModeButtons(sec); Channels.syncModeUI(); }
     const nav = document.querySelector('.bottom-nav');
     if (nav && !document.querySelector('.bnav[data-tab="home"]')) {
       const h = document.createElement('button'); h.type = 'button'; h.className = 'bnav'; h.dataset.tab = 'home';

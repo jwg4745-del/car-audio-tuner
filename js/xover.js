@@ -18,10 +18,15 @@ const Xover = (() => {
     Channels.onChange(loadFields);
     setTimeout(loadFields, 0);
     el('xoSaveCh').onclick = () => {
+      if (Channels.isPassive && Channels.isPassive()) { alert('被动分频模式下分频点由无源分频器决定，不能写入通道。'); return; }
       const v = (id) => (el(id).value === '' ? null : Math.max(10, Math.min(20000, +el(id).value)));
       Channels.update(el('xoChan').value, { hpf: v('xoChHpf'), lpf: v('xoChLpf'), slope: +el('xoSlope').value });
     };
-    el('xoDefCh').onclick = () => { const c = Channels.get(el('xoChan').value); const d = Channels.XO[c.type]; Channels.update(c.id, { hpf: d.hpf, lpf: d.lpf }); };
+    el('xoDefCh').onclick = () => {
+      if (Channels.isPassive && Channels.isPassive()) { alert('被动分频模式下分频点由无源分频器决定，不能套用写入。'); return; }
+      const c = Channels.get(el('xoChan').value); const d = Channels.XO[c.type]; Channels.update(c.id, { hpf: d.hpf, lpf: d.lpf });
+    };
+    Channels.onChange(() => { if (Channels.syncModeUI) Channels.syncModeUI(); });
     el('xoLoadCh').onclick = () => {
       const c = Channels.get(el('xoChan').value);
       if (c.hpf && c.lpf) { el('xoType').value = 'bpf'; el('xoFreq').value = c.hpf; el('xoFreq2').value = c.lpf; }

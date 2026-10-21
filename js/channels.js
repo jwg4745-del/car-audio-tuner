@@ -1,21 +1,22 @@
 /** 12 通道车用 DSP 模型：名称/声道侧/类型/静音 + 每通道延时、电平、极性、分频，存 localStorage */
 const Channels = (() => {
-  const KEY = 'cat-channels-v2';
-  const OLD_KEY = 'cat-channels-v1';
-  // 默认 = 豆豆的赛那预设（sn7.26.jssh，预设组 7.26，OUT1–OUT12）：[名称, 侧, 类型, HPF, LPF, 增益dB, 延时ms, 反相, 静音, EQ[[Hz,dB,Q]], 备注]
+  const KEY = 'cat-channels-v3';
+  const OLD_KEYS = ['cat-channels-v2', 'cat-channels-v1'];
+  // 空白通用 12 路：只有常见布局名称与单元类型，分频用类型默认值；增益/延时/极性/EQ 全部为空，等测量后填写
+  // [名称, 侧, 类型, HPF|null用类型默认, LPF|null用类型默认, 增益dB, 延时ms, 反相, 静音, EQ, 备注]
   const DEF = [
-    ['左尾门 GX628', 'L', 'rear', 100, 6500, -14.5, 11.604, false, false, [[160, -1.5, 1], [2500, -2.5, 1], [6300, -1.5, 0.9]], '只留空间尾韵，比右尾门低1dB'],
-    ['右尾门 GX628', 'R', 'rear', 100, 6500, -13.5, 10.875, false, false, [[160, -1.5, 1], [2500, -2.5, 1], [6300, -1.5, 0.9]], '增益保守，避免人声从车尾出来'],
-    ['左二排滑门 GX328', 'L', 'rear', 250, 10000, -9, 12.229, false, false, [[250, 0, 1], [500, 0, 1.2], [2500, -2, 1], [3150, -1.5, 1.2], [8000, -1, 0.8]], '串联68μF电容，实际下限约600–1000Hz'],
-    ['右二排滑门 GX328', 'R', 'rear', 250, 10000, -8.5, 11.208, false, false, [[250, 0, 1], [500, 0, 1.2], [2500, -2, 1], [3150, -1.5, 1.2], [8000, -1, 0.8]], '串联68μF电容，比左高0.5dB'],
-    ['左前门中低音 9600C', 'L', 'woofer', 55, 300, -1, 6.417, false, false, [[63, -1, 0.8], [125, -1, 1], [250, -1.5, 1]], '主驾近侧略收'],
-    ['右前门中低音 9600C', 'R', 'woofer', 55, 300, 0, 4.229, false, false, [[63, -1, 0.8], [125, -1, 1], [250, -1.5, 1]], '中低频声像锚点'],
-    ['超低音 Stage82', 'M', 'sub', 28, 75, -2, 0, false, false, [[35, 1, 0.9], [45, 1.5, 0.9], [70, -1, 1]], '实车正相，左右输入各50%；换炮/箱体需重测正反相'],
-    ['仪表台中置（关闭）', 'C', 'center', null, null, null, null, false, true, [], '永久静音，不参与调音'],
-    ['前左仪表台中音 GX328', 'L', 'mid', 300, 4000, -4, 6.854, false, false, [[500, -1, 1.2], [1600, 0.5, 1], [2500, -1.2, 1.2], [3150, -0.8, 1]], '主唱偏左先降0.5dB'],
-    ['前右仪表台中音 GX328', 'R', 'mid', 300, 4000, -3, 4.958, false, false, [[500, -1, 1.2], [1600, 0.5, 1], [2500, -1.2, 1.2], [3150, -0.8, 1]], '比左高1dB，口型推向中控'],
-    ['前左高音 FIT19T', 'L', 'tweeter', 4000, null, -7.5, 6.708, true, false, [[5000, -0.8, 1], [6300, -1.2, 1], [10000, 0.5, 0.8]], '实车反相；近耳先压低'],
-    ['前右高音 FIT19T', 'R', 'tweeter', 4000, null, -6, 4.667, true, false, [[5000, -0.4, 1], [6300, -0.8, 1], [10000, 0.8, 0.8]], '实车反相；比左高1.5dB'],
+    ['前左高音', 'L', 'tweeter', null, null, null, null, false, false, [], ''],
+    ['前左中音', 'L', 'mid', null, null, null, null, false, false, [], ''],
+    ['前左低音', 'L', 'woofer', null, null, null, null, false, false, [], ''],
+    ['前右高音', 'R', 'tweeter', null, null, null, null, false, false, [], ''],
+    ['前右中音', 'R', 'mid', null, null, null, null, false, false, [], ''],
+    ['前右低音', 'R', 'woofer', null, null, null, null, false, false, [], ''],
+    ['中置', 'C', 'center', null, null, null, null, false, false, [], ''],
+    ['后左', 'L', 'rear', null, null, null, null, false, false, [], ''],
+    ['后右', 'R', 'rear', null, null, null, null, false, false, [], ''],
+    ['超低音左', 'L', 'sub', null, null, null, null, false, false, [], ''],
+    ['超低音右', 'R', 'sub', null, null, null, null, false, false, [], ''],
+    ['备用', 'M', 'full', null, null, null, null, false, false, [], ''],
   ];
   const XO = {
     tweeter: { hpf: 3500, lpf: null }, mid: { hpf: 300, lpf: 3500 }, woofer: { hpf: 40, lpf: 300 },
@@ -24,46 +25,43 @@ const Channels = (() => {
   const TYPE_CN = { tweeter: '高音', mid: '中音', woofer: '低音', center: '中置', rear: '后场', sub: '超低音', full: '全频' };
   const SIDE_CN = { L: '左', R: '右', C: '中', M: '单声道' };
   let chs = [];
-  let polFix = false;
   let selected = new Set([1]);
   const listeners = [];
 
   function defaults() {
-    return DEF.map(([name, side, type, hpf, lpf, g, d, inv, mute, eq, note], i) => ({
-      id: i + 1, name, side, type, mute,
-      distCm: null, delayMs: null, levelDb: null, polarity: mute ? '—' : inv ? '反 −（预设）' : '正 +（预设）',
-      hpf, lpf, slope: 24, gainSetDb: g, delaySetMs: d, invert: inv, note,
-      eq: eq.map(([freq, gain, q]) => ({ freq, gain, q })),
-    }));
+    return DEF.map(([name, side, type, hpf, lpf, g, d, inv, mute, eq, note], i) => {
+      const xo = XO[type] || XO.full;
+      const h = hpf != null ? hpf : xo.hpf;
+      const l = lpf != null ? lpf : xo.lpf;
+      return {
+        id: i + 1, name, side, type, mute,
+        distCm: null, delayMs: null, levelDb: null, polarity: mute ? '—' : '未测',
+        hpf: h, lpf: l, slope: 24, gainSetDb: g, delaySetMs: d, invert: inv, note,
+        eq: (eq || []).map((e) => Array.isArray(e) ? { freq: e[0], gain: e[1], q: e[2] } : e),
+      };
+    });
   }
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (s && Array.isArray(s.chs) && s.chs.length === 12) {
         chs = s.chs; selected = new Set(s.sel || [1]);
-        // v11 预设相位修正：CH7 正相，CH11/12 反相（仅当仍是旧预设值时）
-        if (!s.polFix1) {
-          const d = defaults();
-          [[7, '反 −（预设）'], [11, '正 +（预设）'], [12, '正 +（预设）']].forEach(([id, oldPol]) => {
-            const c = chs[id - 1]; if (c && c.polarity === oldPol) { c.invert = d[id - 1].invert; c.polarity = d[id - 1].polarity; c.note = d[id - 1].note; }
-          });
-          polFix = true;
-        }
-        if (polFix) save();
         return;
       }
-      // 迁移：旧版 v1 通道表备份后换成新预设（旧数据保留在 cat-channels-v1-backup）
-      const old = localStorage.getItem(OLD_KEY);
-      if (old) { localStorage.setItem(OLD_KEY + '-backup', old); localStorage.removeItem(OLD_KEY); }
+      // 丢掉旧版通道缓存，仅备份
+      OLD_KEYS.forEach((k) => {
+        const old = localStorage.getItem(k);
+        if (old) { try { localStorage.setItem(k + '-backup', old); } catch (_) {} localStorage.removeItem(k); }
+      });
     } catch (_) {}
     chs = defaults();
   }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ chs, sel: [...selected], polFix1: true })); } catch (_) {}
+    try { localStorage.setItem(KEY, JSON.stringify({ chs, sel: [...selected] })); } catch (_) {}
     listeners.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
   }
   const el = (id) => document.getElementById(id);
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"' }[c]));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   function get(id) { return chs.find((c) => c.id === +id); }
   function label(id) { const c = get(id); return c ? `CH${c.id} ${c.name}` : '—'; }
@@ -87,7 +85,7 @@ const Channels = (() => {
     el('chNone').onclick = () => { selected = new Set(); save(); render(); };
     el('chEdit').onclick = () => { const p = el('chEditor'); p.hidden = !p.hidden; renderEditor(); };
     el('chReset').onclick = () => {
-      if (!confirm('恢复赛那 7.26 预设（OUT1–12 名称、分频、增益、延时、相位、EQ）并清空测量数据？')) return;
+      if (!confirm('恢复空白通用 12 路（清空测量数据、增益/延时/极性/EQ）？')) return;
       chs = defaults(); selected = new Set([1]); save(); render(); renderEditor();
     };
     render();

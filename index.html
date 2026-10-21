@@ -889,7 +889,7 @@
             <div class="card chart-card"><h3>波形总览（红线 = 满幅）</h3><canvas id="anWave" width="640" height="160"></canvas></div>
           </div>
           <div class="card chart-card an-block">
-            <h3>平均频谱（Welch）+ 1/3 倍频程 · 黄虚线 = 目标 · 红柱 = 偏差 > ±4 dB</h3>
+            <h3>平均频谱（Welch）+ 1/3 倍频程 · 黄虚线 = 目标 · 红柱 = 偏差 &gt; ±4 dB</h3>
             <canvas id="anSpec" width="640" height="320"></canvas>
           </div>
           <div class="panel-grid an-grid">
@@ -923,7 +923,7 @@
             <li><strong>手机打开：</strong>用手机浏览器访问部署地址（须 <strong>HTTPS</strong>）。iOS Safari 不支持明文 HTTP 的麦克风。可「添加到主屏幕」以类 App 全屏使用（PWA）。</li>
             <li><strong>解锁音频：</strong>进入页面后先点「点击解锁音频」，再点「授权麦克风」。iOS 必须在用户手势内启动 AudioContext。</li>
             <li><strong>电脑打开：</strong>在本目录执行 <code>python3 -m http.server 8080</code>，访问 <code>http://localhost:8080</code>。</li>
-            <li><strong>12 通道：</strong>默认按你的赛那预设 7.26 排列（CH1/2 尾门，CH3/4 二排滑门，CH5/6 前门中低音，CH7 超低音（正相），CH8 中置已关闭，CH9/10 仪表台中音，CH11/12 FIT19T 高音（反相）），分频/增益/延时/EQ 已预填。名称、声道侧和单元类型可在「编辑通道」修改，并保存在本机。点按选择，长按独奏，🔈 静音。</li>
+            <li><strong>12 通道：</strong>默认空白通用布局（前左/前右高中低、中置、后左/后右、超低音左/右、备用），只预填单元类型对应的分频起点；增益、延时、极性、EQ 均为空，测完再填。名称与声道侧可在「编辑通道」修改，保存在本机。点按选择，长按独奏，🔈 静音。</li>
             <li><strong>调音方案：</strong>录音分析完成后自动生成；也可在「通道方案」点「生成调音方案」汇总所有已测数据。方案按 增益 → 极性 → 分频 → 延时 → EQ → 复测 的顺序给出每个通道的具体数值和一句原因；缺数据会提示先测什么，起始值标为「默认值」。EQ 先衰减，提升最多 +3 dB、衰减最多 −6 dB，每通道最多 8 段，窄深谷不硬补。点「应用到通道方案」写入 12 通道表，可复制或导出 TXT/CSV/JSON 照抄进 DSP。</li>
             <li><strong>重要：</strong>浏览器只输出立体声，测试某个通道时请在主机 / DSP 上切换或只打开对应物理通道；本工具按通道声道侧送左/右信号，并逐通道记录延时、电平、极性、分频，汇总在「通道方案」。</li>
             <li><strong>信号发生器：</strong>正弦/扫频/粉红/白噪/猝发/脉冲，调音基础激励。</li>

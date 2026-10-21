@@ -203,7 +203,7 @@ const DspExport = (() => {
   }
   function print() {
     const w = window.open('', '_blank'); if (!w) { alert('浏览器拦截了新窗口，允许弹窗后再试'); return; }
-    w.document.write(`<!doctype html><meta charset="utf-8"><title>DSP 参数表</title><style>body{font-family:sans-serif;padding:16px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #999;padding:4px 6px;text-align:left}tr.mute{color:#999}</style><h2>DSP 参数表（${srcName()}）</h2><p>${new Date().toLocaleString('zh-CN', { hour12: false })} · 赛那 12 路</p>${html(rows($('dxSrc').value))}<p>⚠️ 软件建议值仅供参考，输入 DSP 后先小音量确认。</p>`);
+    w.document.write(`<!doctype html><meta charset="utf-8"><title>DSP 参数表</title><style>body{font-family:sans-serif;padding:16px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #999;padding:4px 6px;text-align:left}tr.mute{color:#999}</style><h2>DSP 参数表（${srcName()}）</h2><p>${new Date().toLocaleString('zh-CN', { hour12: false })} · 12 路</p>${html(rows($('dxSrc').value))}<p>⚠️ 软件建议值仅供参考，输入 DSP 后先小音量确认。</p>`);
     w.document.close(); setTimeout(() => w.print(), 300);
   }
   function init() { if (!$('panel-dsp')) return; $('dxSrc').onchange = render; $('dxCsv').onclick = download; $('dxPrint').onclick = print; Channels.onChange(() => { if (!$('panel-dsp').hidden) render(); }); render(); document.querySelectorAll('[data-tab="dsp"]').forEach((b) => b.addEventListener('click', render)); }

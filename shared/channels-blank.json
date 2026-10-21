@@ -2,7 +2,7 @@
   "app": "汽车音响调音",
   "preset": "blank-generic-12ch",
   "version": 3,
-  "note": "无车辆预填数据；增益/延时/极性/EQ 为空，分频仅为单元类型起点",
+  "note": "无车辆预填数据；增益/延时/极性/EQ 为空，分频仅为单元类型起点。分频方式默认主动（active）；被动时前声场同侧高中低合并为前左/前右显示，分频不可调。",
   "channels": [
     {
       "id": 1,
@@ -262,5 +262,12 @@
       "hpf": null,
       "lpf": null
     }
+  },
+  "crossoverModeDefault": "active",
+  "crossoverModeKey": "cat-crossover-mode-v1",
+  "passiveMerge": {
+    "front": "same-side tweeter+mid+woofer → 前左/前右",
+    "rear": "already single path per side — no merge",
+    "center_sub_spare": "unchanged"
   }
 }

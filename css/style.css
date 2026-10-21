@@ -742,3 +742,15 @@ body.cg-on .header{padding-right:140px}
 .ex-list{display:flex;flex-direction:column;gap:8px;margin:12px 0}
 .ex-row{display:flex;align-items:center;gap:10px;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px}
 .ex-row div{flex:1;min-width:0}.ex-row b{display:block;font-size:13px}.ex-row small{color:#8b949e;font-size:11px}
+
+/* 分频方式选择 */
+.xo-mode-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px;padding:8px 10px;background:#121820;border:1px solid #30363d;border-radius:10px}
+.xo-mode-label{font-size:13px;color:#8b949e;margin-right:4px}
+.xo-mode-btn{background:#1b2230;border:1px solid #30363d;color:#e6edf3;border-radius:16px;padding:6px 14px;font-size:13px;cursor:pointer}
+.xo-mode-btn.on{background:rgba(63,185,80,.18);border-color:#3fb950;color:#3fb950}
+.xo-mode-hint{flex:1 1 100%;margin:2px 0 0;font-size:12px}
+.hm-xo{margin-bottom:12px}
+.chc.merged{border-color:#a371f7}
+.chc.merged.sel{border-color:#a371f7;background:rgba(163,113,247,.15)}
+.row-merged td{background:rgba(163,113,247,.06)}
+body.xo-passive #xoSaveCh,body.xo-passive #xoDefCh{opacity:.45}
